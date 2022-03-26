@@ -1,0 +1,30 @@
+from models.Backtest import Backtest
+from models.Strategies import Strategy, VumanchuEmasMfi, EmaStochRsiDivergence, WavetrendEMA, MtfEmaMacdDiv
+
+
+if __name__ == '__main__':
+    strategy = EmaStochRsiDivergence.EmaStochRsiDivergence('BTCUSDT', '5m')
+    backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    backtest.run()
+    print('\n')
+    print('\n')
+    strategy = EmaStochRsiDivergence.EmaStochRsiDivergence('BTCUSDT', '15m')
+    backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    backtest.run()
+    print('\n')
+    print('\n')
+    strategy = EmaStochRsiDivergence.EmaStochRsiDivergence('BTCUSDT', '1h')
+    backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    backtest.run()
+    print('\n')
+    print('\n')
+    strategy = EmaStochRsiDivergence.EmaStochRsiDivergence('BTCUSDT', '2h')
+    backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    backtest.run()
+    print('\n')
+    print('\n')
+    strategy = EmaStochRsiDivergence.EmaStochRsiDivergence('BTCUSDT', '4h')
+    backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    backtest.run()
+    print('\n')
+    print('\n')
