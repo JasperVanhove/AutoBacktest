@@ -9,7 +9,7 @@ class VumanchuEmasMfi(Strategy):
         super(VumanchuEmasMfi, self).__init__(symbol, timeframe, atr_multiplier, rr)
 
         self.name = '50/200-EMA\'s + Wavetrend + MFI Strategy (Trade Pro)'
-
+        self.short_name = 'Multi_EMA_Vumanchu_MFI'
         self.long_ema_period = 200
         self.short_ema_period = 50
 
@@ -33,9 +33,9 @@ class VumanchuEmasMfi(Strategy):
         self.df['Long EMA'] = talib.EMA(self.df['Close'], timeperiod=self.long_ema_period).astype(float).ffill()
         self.df['Short EMA'] = talib.EMA(self.df['Close'], timeperiod=self.short_ema_period).astype(float).ffill()
         self.df['ATR'] = talib.ATR(self.df['High'], self.df['Low'], self.df['Close'], timeperiod=self.atr_period).astype(float).ffill()
-        self.df['WT1'] = self._set_wavetrend(1)
-        self.df['WT2'] = self._set_wavetrend(2)
-        self.df['MFI'] = self._set_MFI()
+        self.df['WT1'] = self._set_wavetrend(1).astype(float).ffill()
+        self.df['WT2'] = self._set_wavetrend(2).astype(float).ffill()
+        self.df['MFI'] = self._set_MFI().astype(float).ffill()
 
         self.df['CrossUp'] = self.df.apply(lambda row: self.crossover(row.name, 'WT1', 'WT2'), axis=1).fillna(0).astype(int)
         self.df['CrossDown'] = self.df.apply(lambda row: self.crossover(row.name, 'WT2', 'WT1'), axis=1).fillna(0).astype(int)
@@ -70,8 +70,10 @@ class VumanchuEmasMfi(Strategy):
 
     def _enter_trade(self, row):
         if row['Side'] == 1:
+            # return 1 if row['CrossUp'] == 1 and row['WT2'] < self.zero_line and row['MFI'] > 0 else 0
             return 1 if row['CrossUp'] == 1 and row['MFI'] > 0 and row['WT2'] < self.zero_line and self._check_pullback(row) else 0
         else:
+            # return 1 if row['CrossDown'] == 1 and row['WT2'] > self.zero_line and row['MFI'] < 0 else 0
             return 1 if row['CrossDown'] == 1 and row['MFI'] < 0 and row['WT2'] > self.zero_line and self._check_pullback(row) else 0
 
     def _get_stoploss_price(self, row):
@@ -118,10 +120,10 @@ class VumanchuEmasMfi(Strategy):
             return pd.Series(wt2)
 
     def _set_MFI(self):
-        source = ((self.df['Close'] - self.df['Open']) / (self.df['High'] - self.df['Low'])) * self.mfi_multiplier
+        source = (((self.df['Close'] - self.df['Open']) / (self.df['High'] - self.df['Low'])) * self.mfi_multiplier).astype(float).ffill()
         mfi = talib.SMA(source, self.mfi_period) - self.mfi_posY
 
-        return pd.Series(mfi)
+        return mfi
 
     def _check_pullback(self, row):
         start_index = row.name - self.pullback_period

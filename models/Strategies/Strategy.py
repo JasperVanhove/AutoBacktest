@@ -9,6 +9,7 @@ class Strategy:
         load_dotenv()
 
         self.name = 'Base Strategy'
+        self.short_name = 'Base'
         self.symbol = symbol
         self.tf = timeframe
 
@@ -23,7 +24,6 @@ class Strategy:
         raise NotImplementedError()
 
     def set_basic_columns(self, index, row):
-        row['Side'] = self._get_side(row)
         row['Has Open Position'] = self._has_open_position(index)
         row['SL Price'] = self.df['SL Price'].iloc[index - 1 if index > 0 else 0]
         row['TP Price'] = self.df['TP Price'].iloc[index - 1 if index > 0 else 0]

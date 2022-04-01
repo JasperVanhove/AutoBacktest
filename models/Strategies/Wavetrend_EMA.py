@@ -9,6 +9,7 @@ class WavetrendEMA(Strategy):
         super(WavetrendEMA, self).__init__(symbol, timeframe, atr_multiplier, rr)
 
         self.name = '200-EMA + Wavetrend Strategy'
+        self.short_name = 'EMA_Wavetrend'
 
         self.ema_period = 200
 

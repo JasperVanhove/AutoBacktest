@@ -9,6 +9,7 @@ class MtfEmaMacdDiv(Strategy):
         super(MtfEmaMacdDiv, self).__init__(symbol, timeframe, atr_multiplier, rr)
 
         self.name = 'Multi Timeframe EMA + MACD Divergence Strategy'
+        self.short_name = 'MTF_EMA_MACD_DIV'
         self.trigger_candle = 2
         self.long_ema_period = 50
         self.long_ema_tf = '60T'

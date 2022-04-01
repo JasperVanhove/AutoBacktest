@@ -9,6 +9,7 @@ class EmaStochRsiDivergence(Strategy):
         super(EmaStochRsiDivergence, self).__init__(symbol, timeframe, atr_multiplier, rr)
 
         self.name = '200-EMA + Stochastic cross + RSI Divergence Strategy'
+        self.short_name = 'EMA_STOCH_RSI_DIV'
         self.ema_period = 200
 
         self.rsi_period = 14

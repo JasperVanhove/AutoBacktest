@@ -1,8 +1,11 @@
+import csv
 import warnings
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
+
 from models.Strategies import Strategy
 
 warnings.filterwarnings('ignore')
@@ -63,6 +66,17 @@ class Backtest:
         print('/_/   \_\__,_|\__\___/|____/ \__,_|\___|_|\_\\__\___||___/\__|')
         print('\n')
         print("\nBeginning new backtest for {} on {} timeframe using {}.".format(self.strategy.symbol, self.strategy.tf, self.strategy.name))
+
+    def print_header_to_file(self):
+        with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'w') as f:
+            f.write('\n')
+            f.write('    _         _        ____             _    _            _   \n')
+            f.write('   / \  _   _| |_ ___ | __ )  __ _  ___| | _| |_ ___  ___| |_ \n')
+            f.write('  / _ \| | | | __/ _ \|  _ \ / _` |/ __| |/ / __/ _ \/ __| __|\n')
+            f.write(' / ___ \ |_| | || (_) | |_) | (_| | (__|   <| ||  __/\__ \ |_\n')
+            f.write('/_/   \_\__,_|\__\___/|____/ \__,_|\___|_|\_\\__\___||___/\__|\n')
+            f.write('\n')
+            f.write("\nBeginning new backtest for {} on {} timeframe using {}.\n".format(self.strategy.symbol, self.strategy.tf, self.strategy.name))
 
     def open_position(self, row):
         self.has_open_position = True
@@ -125,6 +139,8 @@ class Backtest:
 
     def print_results(self):
         # Todo: Add extra result like win/loss streak, fees, drawdown, avg trade duration
+        # Todo: Put all the results in dictionary and use this to print/export
+        self.print_header_to_file()
 
         abs_return = self.balance - self.starting_balance
         pc_return = 100 * abs_return / self.starting_balance
@@ -143,90 +159,97 @@ class Backtest:
             pc_breakeven = 100 * len(break_even_trades) / amount_of_trades
 
             equity_df = self._create_equity_dataframe()
-            chart_data = go.Scatter(x=equity_df['Time'], y=equity_df['Equity'])
-            fig = go.Figure(data=chart_data)
+            self._write_equity_dataframe_to_file(equity_df)
 
-            print("\n---------------------------------------------------")
-            print("                 Backtest Results")
-            print("---------------------------------------------------")
-            print("Start date:              {}".format(self.start_date))
-            print("End date:                {}".format(self.end_date))
-            print("Starting balance:        ${}".format(round(self.starting_balance, 2)))
-            print("Ending balance:          ${}".format(round(self.balance, 2)))
-            print("Total return:            ${} ({}%)".format(round(abs_return, 2),
-                                                              round(pc_return, 1)))
+            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
 
-            print("Instrument traded: ", self.strategy.symbol)
-            if self.commission:
-                print("Total fees:              ${}".format(round(self.fees, 3)))
-            print("Total no. trades:        ", amount_of_trades)
-            print("Backtest win rate:       {}%".format(round(pc_win, 1)))
-            print("Backtest loss rate:       {}%".format(round(pc_loss, 1)))
-            if pc_breakeven:
-                print("\nInstrument breakeven rate (%):")
-                print(pc_breakeven)
+                f.write("\n---------------------------------------------------\n")
+                f.write("                 Backtest Results\n")
+                f.write("---------------------------------------------------\n")
+                f.write("Start date:              {}\n".format(self.start_date))
+                f.write("End date:                {}\n".format(self.end_date))
+                f.write("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
+                f.write("Ending balance:          ${}\n".format(round(self.balance, 2)))
+                f.write("Total return:            ${} ({}%)\n".format(round(abs_return, 2),
+                                                                      round(pc_return, 1)))
 
-            print("")
+                f.write("Instrument traded: {}\n".format(self.strategy.symbol))
+                if self.commission:
+                    f.write("Total fees:              ${}\n".format(round(self.fees, 3)))
+                f.write("Total no. trades:        {}\n".format(amount_of_trades))
+                f.write("Backtest win rate:       {}%\n".format(round(pc_win, 1)))
+                f.write("Backtest loss rate:       {}%\n".format(round(pc_loss, 1)))
+                if pc_breakeven:
+                    f.write("\nInstrument breakeven rate (%):      {}\n".format(round(pc_breakeven, 1)))
 
-            s = (equity_df.Returns + 1).cumprod()
-            max_drawdown = np.ptp(s) / s.max()
+                f.write("")
 
-            print("Maximum drawdown:        {}%".format(round(max_drawdown, 2)))
-            # print("Max win:                 ${}".format(round(max_win, 2)))
-            # print("Average win:             ${}".format(round(avg_win, 2)))
-            # print("Max loss:                -${}".format(round(max_loss, 2)))
-            # print("Average loss:            -${}".format(round(avg_loss, 2)))
-            # print("Longest win streak:      {} trades".format(longest_win_streak))
-            # print("Longest losing streak:   {} trades".format(longest_lose_streak))
-            # print("Average trade duration:  {}".format(backtest_results['all_trades']['avg_trade_duration']))
-            if len(long_trades) > 0:
-                losing_long_trades = [trade for trade in long_trades if trade['Outcome'] == '-']
-                winning_long_trades = [trade for trade in long_trades if trade['Outcome'] == '+']
+                s = (equity_df.Returns + self.starting_balance).cumprod()
+                max_drawdown = np.ptp(s) / s.max()
 
-                pc_loss_long = 100 * len(losing_long_trades) / len(long_trades)
-                pc_win_long = 100 * len(winning_long_trades) / len(long_trades)
+                f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown, 2)))
+                # f.write("Max win:                 ${}\n".format(round(max_win, 2)))
+                # f.write("Average win:             ${}\n".format(round(avg_win, 2)))
+                # f.write("Max loss:                -${}\n".format(round(max_loss, 2)))
+                # f.write("Average loss:            -${}\n".format(round(avg_loss, 2)))
+                # f.write("Longest win streak:      {} trades\n".format(longest_win_streak))
+                # f.write("Longest losing streak:   {} trades\n".format(longest_lose_streak))
+                # f.write("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
+                if len(long_trades) > 0:
+                    losing_long_trades = [trade for trade in long_trades if trade['Outcome'] == '-']
+                    winning_long_trades = [trade for trade in long_trades if trade['Outcome'] == '+']
 
-                print("\n            Summary of long trades")
-                print("----------------------------------------------")
-                print("Number of long trades:   {}".format(len(long_trades)))
-                print("Long win rate:           {}%".format(round(pc_win_long, 1)))
-                print("Long loss rate:           {}%".format(round(pc_loss_long, 1)))
-                # print("Max win:                 ${}".format(round(max_long_win, 2)))
-                # print("Average win:             ${}".format(round(avg_long_win, 2)))
-                # print("Max loss:                -${}".format(round(max_long_loss, 2)))
-                # print("Average loss:            -${}".format(round(avg_long_loss, 2)))
-            else:
-                print("There were no long trades.")
+                    pc_loss_long = 100 * len(losing_long_trades) / len(long_trades)
+                    pc_win_long = 100 * len(winning_long_trades) / len(long_trades)
 
-            if len(short_trades) > 0:
-                winning_short_trades = [trade for trade in short_trades if trade['Outcome'] == '+']
-                losing_short_trades = [trade for trade in short_trades if trade['Outcome'] == '-']
+                    f.write("\n            Summary of long trades\n")
+                    f.write("----------------------------------------------\n")
+                    f.write("Number of long trades:   {}\n".format(len(long_trades)))
+                    f.write("Long win rate:           {}%\n".format(round(pc_win_long, 1)))
+                    f.write("Long loss rate:           {}%\n".format(round(pc_loss_long, 1)))
+                    # f.write("Max win:                 ${}\n".format(round(max_long_win, 2)))
+                    # f.write("Average win:             ${}\n".format(round(avg_long_win, 2)))
+                    # f.write("Max loss:                -${}\n".format(round(max_long_loss, 2)))
+                    # f.write("Average loss:            -${}\n".format(round(avg_long_loss, 2)))
+                else:
+                    f.write("There were no long trades.\n")
 
-                pc_win_short = 100 * len(winning_short_trades) / len(short_trades)
-                pc_loss_short = 100 * len(losing_short_trades) / len(short_trades)
+                if len(short_trades) > 0:
+                    winning_short_trades = [trade for trade in short_trades if trade['Outcome'] == '+']
+                    losing_short_trades = [trade for trade in short_trades if trade['Outcome'] == '-']
 
-                print("\n            Summary of short trades")
-                print("----------------------------------------------")
-                print("Number of short trades:   {}".format(len(short_trades)))
-                print("Short win rate:           {}%".format(round(pc_win_short, 1)))
-                print("Short loss rate:           {}%".format(round(pc_loss_short, 1)))
-                # print("Max win:                 ${}".format(round(max_long_win, 2)))
-                # print("Average win:             ${}".format(round(avg_long_win, 2)))
-                # print("Max loss:                -${}".format(round(max_long_loss, 2)))
-                # print("Average loss:            -${}".format(round(avg_long_loss, 2)))
-            else:
-                print("There were no short trades.")
+                    pc_win_short = 100 * len(winning_short_trades) / len(short_trades)
+                    pc_loss_short = 100 * len(losing_short_trades) / len(short_trades)
 
-            # print("\n                List of trades")
-            # print("----------------------------------------------\n")
-            # for trade in self.trades:
-            #     print(f"{trade['Open Time']}: {trade['Side']} at {trade['Price']}, Closed at {trade['Close Price']} ({trade['Close Time']})")
+                    f.write("\n            Summary of short trades\n")
+                    f.write("----------------------------------------------\n")
+                    f.write("Number of short trades:   {}\n".format(len(short_trades)))
+                    f.write("Short win rate:           {}%\n".format(round(pc_win_short, 1)))
+                    f.write("Short loss rate:           {}%\n".format(round(pc_loss_short, 1)))
+                    # f.write("Max win:                 ${}\n".format(round(max_long_win, 2)))
+                    # f.write("Average win:             ${}\n".format(round(avg_long_win, 2)))
+                    # f.write("Max loss:                -${}\n".format(round(max_long_loss, 2)))
+                    # f.write("Average loss:            -${}\n".format(round(avg_long_loss, 2)))
+                else:
+                    f.write("There were no short trades.\n")
 
-            # fig.show()
-
+            self._export_trades_to_csv()
         else:
-            print("")
-            print("No trades taken.")
+            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
+                f.write('No trades taken.\n')
+                f.write(f'\n')
+
+    def _export_trades_to_csv(self):
+        csv_columns = self.trades[0].keys()
+
+        try:
+            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.csv', 'w') as d:
+                writer = csv.DictWriter(d, fieldnames=csv_columns)
+                writer.writeheader()
+                for trade in self.trades:
+                    writer.writerow(trade)
+        except IOError:
+            print("I/O error")
 
     def _create_equity_dataframe(self):
         time_array = [trade['Close Time'] for trade in self.trades]
@@ -245,3 +268,7 @@ class Backtest:
         loss_perc = abs(row['Entry Price'] - row['SL Price']) / row['Entry Price']
         risk_amount = self.balance * (self.risk / 100)
         return risk_amount / loss_perc
+
+    def _write_equity_dataframe_to_file(self, equity_df):
+        fig = px.line(equity_df, x="Time", y="Equity", title=f"{self.strategy.symbol} on {self.strategy.tf} using {self.strategy.name}.")
+        fig.write_image(f"/home/jasper/Documents/Private/Crypto/Backtesting/Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.pdf")
