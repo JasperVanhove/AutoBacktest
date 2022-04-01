@@ -65,10 +65,10 @@ class Backtest:
         print(' / ___ \ |_| | || (_) | |_) | (_| | (__|   <| ||  __/\__ \ |_')
         print('/_/   \_\__,_|\__\___/|____/ \__,_|\___|_|\_\\__\___||___/\__|')
         print('\n')
-        print("\nBeginning new backtest for {} on {} timeframe using {}.".format(self.strategy.symbol, self.strategy.tf, self.strategy.name))
+        print("\nBeginning new backtest for {} on {} timeframe using {} ({}:1 Risk/Reward).".format(self.strategy.symbol, self.strategy.tf, self.strategy.name, self.strategy.risk_reward))
 
     def print_header_to_file(self):
-        with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'w') as f:
+        with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'w') as f:
             f.write('\n')
             f.write('    _         _        ____             _    _            _   \n')
             f.write('   / \  _   _| |_ ___ | __ )  __ _  ___| | _| |_ ___  ___| |_ \n')
@@ -76,7 +76,7 @@ class Backtest:
             f.write(' / ___ \ |_| | || (_) | |_) | (_| | (__|   <| ||  __/\__ \ |_\n')
             f.write('/_/   \_\__,_|\__\___/|____/ \__,_|\___|_|\_\\__\___||___/\__|\n')
             f.write('\n')
-            f.write("\nBeginning new backtest for {} on {} timeframe using {}.\n".format(self.strategy.symbol, self.strategy.tf, self.strategy.name))
+            f.write("\nBeginning new backtest for {} on {} timeframe using {} ({}:1 Risk/Reward).\n".format(self.strategy.symbol, self.strategy.tf, self.strategy.name, self.strategy.risk_reward))
 
     def open_position(self, row):
         self.has_open_position = True
@@ -161,7 +161,7 @@ class Backtest:
             equity_df = self._create_equity_dataframe()
             self._write_equity_dataframe_to_file(equity_df)
 
-            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
+            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
 
                 f.write("\n---------------------------------------------------\n")
                 f.write("                 Backtest Results\n")
@@ -235,7 +235,7 @@ class Backtest:
 
             self._export_trades_to_csv()
         else:
-            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
+            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.txt', 'a') as f:
                 f.write('No trades taken.\n')
                 f.write(f'\n')
 
@@ -243,7 +243,7 @@ class Backtest:
         csv_columns = self.trades[0].keys()
 
         try:
-            with open(f'/home/jasper/Documents/Private/Crypto/Backtesting/Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.csv', 'w') as d:
+            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.csv', 'w') as d:
                 writer = csv.DictWriter(d, fieldnames=csv_columns)
                 writer.writeheader()
                 for trade in self.trades:
@@ -271,4 +271,4 @@ class Backtest:
 
     def _write_equity_dataframe_to_file(self, equity_df):
         fig = px.line(equity_df, x="Time", y="Equity", title=f"{self.strategy.symbol} on {self.strategy.tf} using {self.strategy.name}.")
-        fig.write_image(f"/home/jasper/Documents/Private/Crypto/Backtesting/Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.pdf")
+        fig.write_image(f"/home/jasper/Documents/Private/Projects/AutoBacktest/Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}.pdf")
