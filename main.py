@@ -1,39 +1,41 @@
+import csv
+
 from models.Backtest import Backtest
-from models.Strategies import Strategy, VumanchuEmasMfi, EmaStochRsiDivergence, WavetrendEMA, MtfEmaMacdDiv
+from models.Strategies import WavetrendEMA
+
+pairs = []
+tfs = []
+rrs = []
+atrs = []
+
+with open('./Util_Data/timeframes.csv', 'r') as fd:
+    reader = csv.reader(fd, delimiter=',')
+    for row in reader:
+        tfs.append(row[0])
+
+with open('./Util_Data/pairs.csv', 'r') as fd:
+    reader = csv.reader(fd, delimiter=',')
+    for row in reader:
+        pairs.append(row[0])
+
+with open('./Util_Data/risk_reward.csv', 'r') as fd:
+    reader = csv.reader(fd, delimiter=',')
+    for row in reader:
+        rrs.append(row[0])
+
+with open('./Util_Data/atrs.csv', 'r') as fd:
+    reader = csv.reader(fd, delimiter=',')
+    for row in reader:
+        atrs.append(row[0])
 
 if __name__ == '__main__':
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '4h', rr=3)  # rr and atr_multiplier
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '2h', rr=3)
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '1h', rr=3)
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '30m', rr=3)
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
-    strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '30mtest', rr=1.5)
-    backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    backtest.run()
-    print('\n')
-    print('\n')
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '15m', rr=2.5)
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
-    # strategy = WavetrendEMA.WavetrendEMA('BTCUSDT', '5m', rr=1.5)
-    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
-    # print('\n')
-    # print('\n')
+    for tf in tfs:
+        for pair in pairs:
+            for rr in rrs:
+                for atr in atrs:
+                    try:
+                        strategy = WavetrendEMA.WavetrendEMA(pair, tf, rr=rr, atr_multiplier=atr)  # rr and atr_multiplier
+                        backtest = Backtest(strategy, 1000, 2, commission=0.06)
+                        backtest.run()
+                    except:
+                        print('Error!')
