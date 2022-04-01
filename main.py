@@ -38,4 +38,4 @@ if __name__ == '__main__':
                         backtest = Backtest(strategy, 1000, 2, commission=0.06)
                         backtest.run()
                     except:
-                        print('Error!')
+                        print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!'.format(pair, tf, rr, atr))
