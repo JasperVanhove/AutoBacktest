@@ -63,7 +63,7 @@ class Strategy:
         raise NotImplementedError()
 
     def _get_candle_data(self):
-        df = pd.read_csv("../Historical_Data/{}_{}.csv".format(self.symbol, self.tf))
+        df = pd.read_csv(f"../../../../Historical_Data/{self.symbol}_{self.tf}.csv")
         df = df[df['Volume'] != 0]
         df.dropna(inplace=True)
         df.reset_index(drop=True, inplace=True)

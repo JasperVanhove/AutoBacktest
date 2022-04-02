@@ -1,48 +1,51 @@
 import pandas as pd
 import talib
 
-from models.Strategies.Strategy import Strategy
+from Program.models.Strategies.Strategy import Strategy
 
-
-class EmaStochRsiDivergence(Strategy):
+class MtfEmaMacdDiv(Strategy):
     def __init__(self, symbol, timeframe, atr_multiplier=1.5, rr=2):
-        super(EmaStochRsiDivergence, self).__init__(symbol, timeframe, atr_multiplier, rr)
+        super(MtfEmaMacdDiv, self).__init__(symbol, timeframe, atr_multiplier, rr)
 
-        self.name = '200-EMA + Stochastic cross + RSI Divergence Strategy'
-        self.short_name = 'EMA_STOCH_RSI_DIV'
-        self.ema_period = 200
+        self.name = 'Multi Timeframe EMA + MACD Divergence Strategy'
+        self.short_name = 'MTF_EMA_MACD_DIV'
+        self.trigger_candle = 2
+        self.long_ema_period = 50
+        self.long_ema_tf = '60T'
+        self.short_ema_period = 50
+        self.short_ema_tf = '15T'
 
-        self.rsi_period = 14
-
-        self.stoch_period = 14
-        self.fastk = 3
-        self.fastd = 3
-        self.fastd_ma = 0
-
+        self.MACD_fast_period = 12
+        self.MACD_slow_period = 26
         self.zero_line = 0
-        self.swing_lockback_period = 10
 
-        self.div_lookback_period = 10
-        self.trigger_candle = 1
+        self.swing_lockback_period = 10
         self.pivot_period = 5
         self.max_pivot = 10
         self.div_max_candles = 100
 
     def set_indicators(self):
+        self.df.set_index('Open Time', inplace=True)
+        long_resample_df = self.df['Close'].resample(self.long_ema_tf).ffill()
+        short_resample_df = self.df['Close'].resample(self.short_ema_tf).ffill()
+
+        self.df['Long EMA'] = talib.EMA(long_resample_df, timeperiod=self.long_ema_period)
+        self.df['Short EMA'] = talib.EMA(short_resample_df, timeperiod=self.short_ema_period)
+
+        self.df['Long EMA'] = self.df['Long EMA'].astype(float).ffill()
+        self.df['Short EMA'] = self.df['Short EMA'].astype(float).ffill()
+
+        self.df['MACD Line'], self.df['MACD Signal'], self.df['MACD Histogram'] = talib.MACD(self.df['Close'], self.MACD_fast_period, self.MACD_slow_period, 9)
+
+        self.df.reset_index(inplace=True)
         self.df = self.df.loc[self.df.notnull().all(axis=1).argmax():]
         self.df.reset_index(inplace=True)
-
-        self.df['EMA'] = talib.EMA(self.df['Close'], timeperiod=self.ema_period).astype(float).ffill()
-        self.df['RSI'] = talib.RSI(self.df['Close'], timeperiod=self.rsi_period).astype(float).ffill()
-
-        self.df['K'] = self._STOCHK(self.df, period=self.fastk, stoch_period=self.stoch_period).astype(float).ffill()
-        self.df['D'] = self._STOCHD(self.df, period=self.fastd, column='K').astype(float).ffill()
 
         self.df['pivot'] = self.df.apply(lambda x: self._set_pivot_points(self.df, x.name, self.pivot_period, self.pivot_period), axis=1)
         self.df['divSignal'] = self.df.apply(lambda row: self._set_div_signal(row), axis=1)
 
     def _get_side(self, row):
-        return 1 if float(row['Close']) > float(row['EMA']) else -1 if float(row['EMA']) > float(row['Close']) else 0
+        return 1 if float(row['Long EMA']) < float(row['Short EMA']) else -1 if float(row['Long EMA']) > float(row['Short EMA']) else 0
 
     def set_exit_signals(self, open_trade, index, row):
         if row['Has Open Position']:
@@ -67,9 +70,9 @@ class EmaStochRsiDivergence(Strategy):
 
     def _enter_trade(self, row):
         if row['Side'] == 1:
-            return 1 if self.crossover(row.name, 'K', 'D') and self._has_divergence([1, 2], row.name, self.div_lookback_period) else 0
+            return 1 if row['divSignal'] == 2 else 0
         else:
-            return 1 if self.crossover(row.name, 'D', 'K') and self._has_divergence([-1, -2], row.name, self.div_lookback_period) else 0
+            return 1 if row['divSignal'] == -2 else 0
 
     def _get_stoploss_price(self, row):
         prev_index = row.name - 1 if row.name > 0 else 0
@@ -129,20 +132,23 @@ class EmaStochRsiDivergence(Strategy):
         filtered_pl_index = pl_index[array_filter]
         end = min(self.max_pivot + 1, len(filtered_pl_index) + 1)
         virtual_line_start = previous_candle - 1
-        if self.df['RSI'].iloc[candleid] > self.df['RSI'].iloc[previous_candle] or self.df['Close'].iloc[candleid] > self.df['Close'].iloc[previous_candle]:
+        if self.df['MACD Line'].iloc[candleid] > self.df['MACD Line'].iloc[previous_candle] or self.df['Close'].iloc[candleid] > self.df['Close'].iloc[previous_candle]:
             for x in range(-1, -end, -1):
                 lenght = candleid - filtered_pl_index[x] + self.pivot_period
                 if filtered_pl_index[x] == 0 or lenght > self.div_max_candles:
                     continue
                 if lenght > 5 and \
-                        self.df['RSI'].iloc[previous_candle] < self.df['RSI'].iloc[filtered_pl_index[x]] and self.df['Close'].iloc[previous_candle] > self.df['Close'].iloc[filtered_pl_index[x]]:
-                    slope1 = (self.df['RSI'].iloc[previous_candle] - self.df['RSI'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
-                    virtual_line1 = self.df['RSI'].iloc[previous_candle] - slope1
+                        self.df['MACD Line'].iloc[previous_candle] < self.df['MACD Line'].iloc[filtered_pl_index[x]] and \
+                        self.df['Close'].iloc[previous_candle] > self.df['Close'].iloc[filtered_pl_index[x]] and \
+                        self.df['MACD Line'].iloc[previous_candle] < self.zero_line and \
+                        self.df['MACD Line'].iloc[filtered_pl_index[x]] < self.zero_line:
+                    slope1 = (self.df['MACD Line'].iloc[previous_candle] - self.df['MACD Line'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
+                    virtual_line1 = self.df['MACD Line'].iloc[previous_candle] - slope1
                     slope2 = (self.df['Close'].iloc[previous_candle] - self.df['Close'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
                     virtual_line2 = self.df['Low'].iloc[previous_candle] - slope2
                     arrived = True
                     for y in range(virtual_line_start, filtered_pl_index[x] + 1, -1):
-                        if self.df['RSI'].iloc[y] < virtual_line1 or self.df['Close'].iloc[y] < virtual_line2:
+                        if self.df['MACD Line'].iloc[y] < virtual_line1 or self.df['Close'].iloc[y] < virtual_line2:
                             arrived = False
                             break
                         virtual_line1 -= slope1
@@ -158,20 +164,23 @@ class EmaStochRsiDivergence(Strategy):
         end = min(self.max_pivot + 1, len(filtered_pl_index) + 1)
         virtual_line_start = previous_candle - 1
 
-        if self.df['RSI'].iloc[candleid] > self.df['RSI'].iloc[previous_candle] or self.df['Close'].iloc[candleid] > self.df['Close'].iloc[previous_candle]:
+        if self.df['MACD Line'].iloc[candleid] > self.df['MACD Line'].iloc[previous_candle] or self.df['Close'].iloc[candleid] > self.df['Close'].iloc[previous_candle]:
             for x in range(-1, -end, -1):
                 lenght = candleid - filtered_pl_index[x] + self.pivot_period
                 if filtered_pl_index[x] == 0 or lenght > self.div_max_candles:
                     continue
                 if lenght > 5 and \
-                        self.df['RSI'].iloc[previous_candle] > self.df['RSI'].iloc[filtered_pl_index[x]] and self.df['Close'].iloc[previous_candle] < self.df['Close'].iloc[filtered_pl_index[x]]:
-                    slope1 = (self.df['RSI'].iloc[previous_candle] - self.df['RSI'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
-                    virtual_line1 = self.df['RSI'].iloc[previous_candle] - slope1
+                        self.df['MACD Line'].iloc[previous_candle] > self.df['MACD Line'].iloc[filtered_pl_index[x]] and \
+                        self.df['Close'].iloc[previous_candle] < self.df['Close'].iloc[filtered_pl_index[x]] and \
+                        self.df['MACD Line'].iloc[previous_candle] < self.zero_line and \
+                        self.df['MACD Line'].iloc[filtered_pl_index[x]] < self.zero_line:
+                    slope1 = (self.df['MACD Line'].iloc[previous_candle] - self.df['MACD Line'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
+                    virtual_line1 = self.df['MACD Line'].iloc[previous_candle] - slope1
                     slope2 = (self.df['Close'].iloc[previous_candle] - self.df['Close'].iloc[filtered_pl_index[x]]) / (previous_candle - filtered_pl_index[x])
                     virtual_line2 = self.df['Low'].iloc[previous_candle] - slope2
                     arrived = True
                     for y in range(virtual_line_start, filtered_pl_index[x] + 1, -1):
-                        if self.df['RSI'].iloc[y] < virtual_line1 or self.df['Close'].iloc[y] < virtual_line2:
+                        if self.df['MACD Line'].iloc[y] < virtual_line1 or self.df['Close'].iloc[y] < virtual_line2:
                             arrived = False
                             break
                         virtual_line1 -= slope1
@@ -186,20 +195,23 @@ class EmaStochRsiDivergence(Strategy):
         filtered_ph_index = ph_index[array_filter]
         end = min(self.max_pivot + 1, len(filtered_ph_index) + 1)
         virtual_line_start = previous_candle - 1
-        if self.df['RSI'].iloc[candleid] < self.df['RSI'].iloc[previous_candle] or self.df['Close'].iloc[candleid] < self.df['Close'].iloc[previous_candle]:
+        if self.df['MACD Line'].iloc[candleid] < self.df['MACD Line'].iloc[previous_candle] or self.df['Close'].iloc[candleid] < self.df['Close'].iloc[previous_candle]:
             for x in range(-1, -end, -1):
                 lenght = candleid - filtered_ph_index[x] + self.pivot_period
                 if filtered_ph_index[x] == 0 or lenght > self.div_max_candles:
                     continue
                 if lenght > 5 and \
-                        self.df['RSI'].iloc[previous_candle] > self.df['RSI'].iloc[filtered_ph_index[x]] and self.df['Close'].iloc[previous_candle] < self.df['Close'].iloc[filtered_ph_index[x]]:
-                    slope1 = (self.df['RSI'].iloc[previous_candle] - self.df['RSI'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
-                    virtual_line1 = self.df['RSI'].iloc[previous_candle] - slope1
+                        self.df['MACD Line'].iloc[previous_candle] > self.df['MACD Line'].iloc[filtered_ph_index[x]] and \
+                        self.df['Close'].iloc[previous_candle] < self.df['Close'].iloc[filtered_ph_index[x]] and \
+                        self.df['MACD Line'].iloc[previous_candle] > self.zero_line and \
+                        self.df['MACD Line'].iloc[filtered_ph_index[x]] > self.zero_line:
+                    slope1 = (self.df['MACD Line'].iloc[previous_candle] - self.df['MACD Line'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
+                    virtual_line1 = self.df['MACD Line'].iloc[previous_candle] - slope1
                     slope2 = (self.df['Close'].iloc[previous_candle] - self.df['Close'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
                     virtual_line2 = self.df['High'].iloc[previous_candle] - slope2
                     arrived = True
                     for y in range(virtual_line_start, filtered_ph_index[x] + 1, -1):
-                        if self.df['RSI'].iloc[y] > virtual_line1 or self.df['Close'].iloc[y] > virtual_line2:
+                        if self.df['MACD Line'].iloc[y] > virtual_line1 or self.df['Close'].iloc[y] > virtual_line2:
                             arrived = False
                             break
                         virtual_line1 -= slope1
@@ -214,20 +226,23 @@ class EmaStochRsiDivergence(Strategy):
         filtered_ph_index = ph_index[array_filter]
         end = min(self.max_pivot + 1, len(filtered_ph_index) + 1)
         virtual_line_start = previous_candle - 1
-        if self.df['RSI'].iloc[candleid] < self.df['RSI'].iloc[previous_candle] or self.df['Close'].iloc[candleid] < self.df['Close'].iloc[previous_candle]:
+        if self.df['MACD Line'].iloc[candleid] < self.df['MACD Line'].iloc[previous_candle] or self.df['Close'].iloc[candleid] < self.df['Close'].iloc[previous_candle]:
             for x in range(-1, -end, -1):
                 lenght = candleid - filtered_ph_index[x] + self.pivot_period
                 if filtered_ph_index[x] == 0 or lenght > self.div_max_candles:
                     continue
                 if lenght > 5 and \
-                        self.df['RSI'].iloc[previous_candle] < self.df['RSI'].iloc[filtered_ph_index[x]] and self.df['Close'].iloc[previous_candle] > self.df['Close'].iloc[filtered_ph_index[x]]:
-                    slope1 = (self.df['RSI'].iloc[previous_candle] - self.df['RSI'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
-                    virtual_line1 = self.df['RSI'].iloc[previous_candle] - slope1
+                        self.df['MACD Line'].iloc[previous_candle] < self.df['MACD Line'].iloc[filtered_ph_index[x]] and \
+                        self.df['Close'].iloc[previous_candle] > self.df['Close'].iloc[filtered_ph_index[x]] and \
+                        self.df['MACD Line'].iloc[previous_candle] > self.zero_line and \
+                        self.df['MACD Line'].iloc[filtered_ph_index[x]] > self.zero_line:
+                    slope1 = (self.df['MACD Line'].iloc[previous_candle] - self.df['MACD Line'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
+                    virtual_line1 = self.df['MACD Line'].iloc[previous_candle] - slope1
                     slope2 = (self.df['Close'].iloc[previous_candle] - self.df['Close'].iloc[filtered_ph_index[x]]) / (previous_candle - filtered_ph_index[x])
                     virtual_line2 = self.df['High'].iloc[previous_candle] - slope2
                     arrived = True
                     for y in range(virtual_line_start, filtered_ph_index[x] + 1, -1):
-                        if self.df['RSI'].iloc[y] > virtual_line1 or self.df['Close'].iloc[y] > virtual_line2:
+                        if self.df['MACD Line'].iloc[y] > virtual_line1 or self.df['Close'].iloc[y] > virtual_line2:
                             arrived = False
                             break
                         virtual_line1 -= slope1
@@ -250,34 +265,3 @@ class EmaStochRsiDivergence(Strategy):
             return 1 if is_hidden_bull_div else 2 if is_regular_bull_div else -1 if is_hidden_bear_div else -2 if is_regular_bear_div else 0
         else:
             return 0
-
-    def _has_divergence(self, div_sides, row_index, div_lookback_period):
-        for index in range(row_index, row_index - div_lookback_period):
-            if self.df['divSignal'].iloc[index] in div_sides:
-                return True
-
-        return False
-
-    def _STOCH(self, ohlc, column='Close', period: int = 14):
-
-        highest_high = ohlc[column].rolling(center=False, window=period).max() if column != 'Close' else ohlc['High'].rolling(center=False, window=period).max()
-        lowest_low = ohlc[column].rolling(center=False, window=period).min() if column != 'Close' else ohlc['Low'].rolling(center=False, window=period).max()
-
-        STOCH = pd.Series(
-            (ohlc[column] - lowest_low) / (highest_high - lowest_low) * 100,
-            name="{0} period STOCH %K".format(period),
-        )
-
-        return STOCH
-
-    def _STOCHK(self, ohlc, period: int = 3, stoch_period: int = 14):
-        return pd.Series(
-            self._STOCH(ohlc, column='RSI', period=stoch_period).rolling(center=False, window=period).mean(),
-            name="{0} period STOCH %K.".format(period),
-        )
-
-    def _STOCHD(self, ohlc, column='K', period: int = 3):
-        return pd.Series(
-            ohlc[column].rolling(center=False, window=period).mean(),
-            name="{0} period STOCH %D.".format(period),
-        )

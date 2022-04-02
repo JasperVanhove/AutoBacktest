@@ -1,8 +1,7 @@
 import pandas as pd
 import talib
 
-from models.Strategies.Strategy import Strategy
-
+from Program.models.Strategies.Strategy import Strategy
 
 class WavetrendEMA(Strategy):
     def __init__(self, symbol, timeframe, atr_multiplier=1.5, rr=2):
