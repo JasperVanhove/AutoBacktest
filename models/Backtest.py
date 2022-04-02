@@ -161,7 +161,7 @@ class Backtest:
             equity_df = self._create_equity_dataframe()
             self._write_equity_dataframe_to_file(equity_df)
 
-            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
+            with open(f'./Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
                 f.write("\n---------------------------------------------------\n")
                 f.write("                 Backtest Results\n")
@@ -235,7 +235,7 @@ class Backtest:
 
             self._export_trades_to_csv()
         else:
-            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
+            with open(f'./Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
                 f.write('No trades taken.\n')
                 f.write(f'\n')
 
@@ -243,7 +243,7 @@ class Backtest:
         csv_columns = self.trades[0].keys()
 
         try:
-            with open(f'/home/jasper/Documents/Private/Projects/AutoBacktest/Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.csv', 'w') as d:
+            with open(f'./Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.csv', 'w') as d:
                 writer = csv.DictWriter(d, fieldnames=csv_columns)
                 writer.writeheader()
                 for trade in self.trades:
@@ -271,4 +271,4 @@ class Backtest:
 
     def _write_equity_dataframe_to_file(self, equity_df):
         fig = px.line(equity_df, x="Time", y="Equity", title=f"{self.strategy.symbol} on {self.strategy.tf} using {self.strategy.name}.")
-        fig.write_image(f"/home/jasper/Documents/Private/Projects/AutoBacktest/Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.pdf")
+        fig.write_image(f"./Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.pdf")
