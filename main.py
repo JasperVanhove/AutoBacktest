@@ -34,8 +34,8 @@ if __name__ == '__main__':
             for rr in rrs:
                 for atr in atrs:
                     try:
-                        strategy = WavetrendEMA.WavetrendEMA(pair, tf, rr=rr, atr_multiplier=atr)  # rr and atr_multiplier
+                        strategy = WavetrendEMA.WavetrendEMA(pair, tf, rr=float(rr), atr_multiplier=float(atr))  # rr and atr_multiplier
                         backtest = Backtest(strategy, 1000, 2, commission=0.06)
                         backtest.run()
-                    except:
-                        print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!'.format(pair, tf, rr, atr))
+                    except Exception as e:
+                        print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!\n{}'.format(pair, tf, rr, atr, e))
