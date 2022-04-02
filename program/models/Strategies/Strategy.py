@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 import talib as talib
@@ -63,7 +66,8 @@ class Strategy:
         raise NotImplementedError()
 
     def _get_candle_data(self):
-        df = pd.read_csv(f"../../../../Historical_Data/{self.symbol}_{self.tf}.csv")
+        path = Path(__file__).parent.parent.parent.parent.parent / f'Historical_Data/{self.symbol}_{self.tf}.csv'
+        df = pd.read_csv(path)
         df = df[df['Volume'] != 0]
         df.dropna(inplace=True)
         df.reset_index(drop=True, inplace=True)

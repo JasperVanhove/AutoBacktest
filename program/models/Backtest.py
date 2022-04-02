@@ -1,14 +1,16 @@
 import csv
 import warnings
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-from Program.models.Strategies import Strategy
+from program.models.Strategies import Strategy
 
 warnings.filterwarnings('ignore')
+data_path = Path(__file__).parent.parent.parent / 'Data/'
 
 
 class Backtest:
@@ -68,7 +70,7 @@ class Backtest:
         print("\nBeginning new backtest for {} on {} timeframe using {} ({}:1 Risk/Reward - Atr: {}).".format(self.strategy.symbol, self.strategy.tf, self.strategy.name, self.strategy.risk_reward, self.strategy.atr_multiplier))
 
     def print_header_to_file(self):
-        with open(f'../../Data/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'w') as f:
+        with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'w') as f:
             f.write('\n')
             f.write('    _         _        ____             _    _            _   \n')
             f.write('   / \  _   _| |_ ___ | __ )  __ _  ___| | _| |_ ___  ___| |_ \n')
@@ -161,7 +163,7 @@ class Backtest:
             equity_df = self._create_equity_dataframe()
             self._write_equity_dataframe_to_file(equity_df)
 
-            with open(f'../../Data/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
+            with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
                 f.write("\n---------------------------------------------------\n")
                 f.write("                 Backtest Results\n")
@@ -235,7 +237,7 @@ class Backtest:
 
             self._export_trades_to_csv()
         else:
-            with open(f'../../Data/Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
+            with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
                 f.write('No trades taken.\n')
                 f.write(f'\n')
 
@@ -243,7 +245,7 @@ class Backtest:
         csv_columns = self.trades[0].keys()
 
         try:
-            with open(f'../../Data/Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.csv', 'w') as d:
+            with open(data_path / f'Trade_Data/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.csv', 'w') as d:
                 writer = csv.DictWriter(d, fieldnames=csv_columns)
                 writer.writeheader()
                 for trade in self.trades:
@@ -271,4 +273,4 @@ class Backtest:
 
     def _write_equity_dataframe_to_file(self, equity_df):
         fig = px.line(equity_df, x="Time", y="Equity", title=f"{self.strategy.symbol} on {self.strategy.tf} using {self.strategy.name}.")
-        fig.write_image(f"../../Data/Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.pdf")
+        fig.write_image(data_path / f'Equity_Curves/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.pdf')
