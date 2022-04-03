@@ -83,7 +83,7 @@ class Backtest:
     def open_position(self, row):
         self.has_open_position = True
         quantity = self._get_trade_size(row)
-        trading_fee = (quantity / row['Entry Price'] * self.commission) * 3  # 3X The fee amount: Entry, SL and TP order
+        trading_fee = (quantity * self.commission / 100) * 3  # 3X The fee amount: Entry, SL and TP order
         self.fees += trading_fee
         self.balance -= trading_fee
 
