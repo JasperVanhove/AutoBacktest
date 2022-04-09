@@ -4,9 +4,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
-
+import plotly.graph_objects as go
 from program.models.Strategies import Strategy
 
 warnings.filterwarnings('ignore')
@@ -108,28 +107,34 @@ class Backtest:
         if latest_position['Side'] == 'Long':
             if close_price > latest_position['Price']:
                 return_amount = risk_amount * self.strategy.risk_reward
-                self.balance += return_amount
                 latest_position['Return'] = return_amount
+                latest_position['Return Perc'] = return_amount / self.balance
                 latest_position['Outcome'] = '+'
+                self.balance += return_amount
             elif close_price < latest_position['Price']:
-                self.balance -= risk_amount
                 latest_position['Return'] = -risk_amount
+                latest_position['Return Perc'] = -risk_amount / self.balance
                 latest_position['Outcome'] = '-'
+                self.balance -= risk_amount
             else:
                 latest_position['Outcome'] = '0'
+                latest_position['Return Perc'] = 0
                 latest_position['Return'] = 0
         elif latest_position['Side'] == 'Short':
             if close_price > latest_position['Price']:
-                self.balance -= risk_amount
                 latest_position['Return'] = -risk_amount
+                latest_position['Return Perc'] = -risk_amount / self.balance
                 latest_position['Outcome'] = '-'
+                self.balance -= risk_amount
             elif close_price < latest_position['Price']:
                 return_amount = risk_amount * self.strategy.risk_reward
-                self.balance += return_amount
                 latest_position['Return'] = return_amount
+                latest_position['Return Perc'] = return_amount / self.balance
                 latest_position['Outcome'] = '+'
+                self.balance += return_amount
             else:
                 latest_position['Outcome'] = '0'
+                latest_position['Return Perc'] = 0
                 latest_position['Return'] = 0
         else:
             raise Exception('No position side was defined')
@@ -160,8 +165,21 @@ class Backtest:
             pc_loss = 100 * len(losing_trades) / amount_of_trades
             pc_breakeven = 100 * len(break_even_trades) / amount_of_trades
 
-            equity_df = self._create_equity_dataframe()
-            self._write_equity_dataframe_to_file(equity_df)
+            trades_df = self._create_dataframe_from_list(self.trades)
+            wins_df = self._create_dataframe_from_list(winning_trades)
+            loss_df = self._create_dataframe_from_list(losing_trades)
+            long_df = self._create_dataframe_from_list(long_trades)
+            short_df = self._create_dataframe_from_list(short_trades)
+
+            self._write_equity_dataframe_to_file(trades_df)
+
+            max_win = wins_df['Returns'].max()
+            avg_win = wins_df['Returns'].mean()
+            max_loss = loss_df['Returns'].min()
+            avg_loss = loss_df['Returns'].min()
+
+            grouper = (trades_df.Outcome != trades_df.Outcome.shift()).cumsum()
+            longest_win_streak = trades_df.groupby(grouper).cumcount().max()    # Todo: Calculate this with a method
 
             with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
@@ -186,33 +204,45 @@ class Backtest:
 
                 f.write("")
 
-                s = (equity_df.Returns + self.starting_balance).cumprod()
-                max_drawdown = np.ptp(s) / s.max()
+                s = (trades_df['Return Perc'] + 1).cumprod()
+                max_drawdown_perc = np.ptp(s) / s.max()
 
-                f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown, 2)))
-                # f.write("Max win:                 ${}\n".format(round(max_win, 2)))
-                # f.write("Average win:             ${}\n".format(round(avg_win, 2)))
-                # f.write("Max loss:                -${}\n".format(round(max_loss, 2)))
-                # f.write("Average loss:            -${}\n".format(round(avg_loss, 2)))
-                # f.write("Longest win streak:      {} trades\n".format(longest_win_streak))
+                f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown_perc * 100, 2)))
+                f.write("Max win:                 ${}\n".format(round(max_win, 2)))
+                f.write("Average win:             ${}\n".format(round(avg_win, 2)))
+                f.write("Max loss:                -${}\n".format(round(abs(max_loss), 2)))
+                f.write("Average loss:            -${}\n".format(round(abs(avg_loss), 2)))
+                f.write("Longest win streak:      {} trades\n".format(longest_win_streak))
                 # f.write("Longest losing streak:   {} trades\n".format(longest_lose_streak))
                 # f.write("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
                 if len(long_trades) > 0:
                     losing_long_trades = [trade for trade in long_trades if trade['Outcome'] == '-']
                     winning_long_trades = [trade for trade in long_trades if trade['Outcome'] == '+']
 
+                    long_win_df = self._create_dataframe_from_list(winning_long_trades)
+                    long_loss_df = self._create_dataframe_from_list(losing_long_trades)
+
                     pc_loss_long = 100 * len(losing_long_trades) / len(long_trades)
                     pc_win_long = 100 * len(winning_long_trades) / len(long_trades)
+
+                    max_long_win = long_win_df['Returns'].max()
+                    avg_long_win = long_win_df['Returns'].mean()
+                    max_long_loss = long_loss_df['Returns'].min()
+                    avg_long_loss = long_loss_df['Returns'].min()
+
+                    grouper = (long_df.Outcome != long_df.Outcome.shift()).cumsum()
+                    longest_long_win_streak = long_df.groupby(grouper).cumcount().max()  # Todo: Calculate this with a method
 
                     f.write("\n            Summary of long trades\n")
                     f.write("----------------------------------------------\n")
                     f.write("Number of long trades:   {}\n".format(len(long_trades)))
                     f.write("Long win rate:           {}%\n".format(round(pc_win_long, 1)))
                     f.write("Long loss rate:           {}%\n".format(round(pc_loss_long, 1)))
-                    # f.write("Max win:                 ${}\n".format(round(max_long_win, 2)))
-                    # f.write("Average win:             ${}\n".format(round(avg_long_win, 2)))
-                    # f.write("Max loss:                -${}\n".format(round(max_long_loss, 2)))
-                    # f.write("Average loss:            -${}\n".format(round(avg_long_loss, 2)))
+                    f.write("Max win:                 ${}\n".format(round(max_long_win, 2)))
+                    f.write("Average win:             ${}\n".format(round(avg_long_win, 2)))
+                    f.write("Max loss:                -${}\n".format(round(abs(max_long_loss), 2)))
+                    f.write("Average loss:            -${}\n".format(round(abs(avg_long_loss), 2)))
+                    f.write("Longest win streak:      {} trades\n".format(longest_long_win_streak))
                 else:
                     f.write("There were no long trades.\n")
 
@@ -220,18 +250,30 @@ class Backtest:
                     winning_short_trades = [trade for trade in short_trades if trade['Outcome'] == '+']
                     losing_short_trades = [trade for trade in short_trades if trade['Outcome'] == '-']
 
+                    short_win_df = self._create_dataframe_from_list(winning_short_trades)
+                    short_loss_df = self._create_dataframe_from_list(losing_short_trades)
+
                     pc_win_short = 100 * len(winning_short_trades) / len(short_trades)
                     pc_loss_short = 100 * len(losing_short_trades) / len(short_trades)
+
+                    max_short_win = short_win_df['Returns'].max()
+                    avg_short_win = short_win_df['Returns'].mean()
+                    max_short_loss = short_loss_df['Returns'].min()
+                    avg_short_loss = short_loss_df['Returns'].min()
+
+                    grouper = (short_df.Outcome != short_df.Outcome.shift()).cumsum()
+                    longest_short_win_streak = short_df.groupby(grouper).cumcount().max()
 
                     f.write("\n            Summary of short trades\n")
                     f.write("----------------------------------------------\n")
                     f.write("Number of short trades:   {}\n".format(len(short_trades)))
                     f.write("Short win rate:           {}%\n".format(round(pc_win_short, 1)))
                     f.write("Short loss rate:           {}%\n".format(round(pc_loss_short, 1)))
-                    # f.write("Max win:                 ${}\n".format(round(max_long_win, 2)))
-                    # f.write("Average win:             ${}\n".format(round(avg_long_win, 2)))
-                    # f.write("Max loss:                -${}\n".format(round(max_long_loss, 2)))
-                    # f.write("Average loss:            -${}\n".format(round(avg_long_loss, 2)))
+                    f.write("Max win:                 ${}\n".format(round(max_short_win, 2)))
+                    f.write("Average win:             ${}\n".format(round(avg_short_win, 2)))
+                    f.write("Max loss:                -${}\n".format(round(abs(max_short_loss), 2)))
+                    f.write("Average loss:            -${}\n".format(round(abs(avg_short_loss), 2)))
+                    f.write("Longest win streak:      {} trades\n".format(longest_short_win_streak))
                 else:
                     f.write("There were no short trades.\n")
 
@@ -253,16 +295,21 @@ class Backtest:
         except IOError:
             print("I/O error")
 
-    def _create_equity_dataframe(self):
-        time_array = [trade['Close Time'] for trade in self.trades]
-        balance_array = [trade['Balance'] for trade in self.trades]
-        returns_array = [trade['Return'] for trade in self.trades]
+    def _create_dataframe_from_list(self, trade_list):
+        time_array = [trade['Close Time'] for trade in trade_list]
+        balance_array = [trade['Balance'] for trade in trade_list]
+        returns_array = [trade['Return'] for trade in trade_list]
+        returns_perc_array = [trade['Return Perc'] for trade in trade_list]
+        close_time_array = [trade['Close Time'] for trade in trade_list]
+        outcome_array = [trade['Outcome'] for trade in trade_list]
 
-        df = pd.DataFrame.from_dict({'Time': time_array, 'Equity': balance_array, 'Returns': returns_array})
+        df = pd.DataFrame.from_dict({'Time': time_array, 'Equity': balance_array, 'Returns': returns_array, 'Return Perc': returns_perc_array, 'Close Time': close_time_array, 'Outcome': outcome_array})
 
         df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d')
         df['Equity'] = df['Equity'].astype(float)
         df['Returns'] = df['Returns'].astype(float)
+        df['Close Time'] = pd.to_datetime(df['Close Time'], format='%Y-%m-%d')
+        df['Outcome'] = df['Outcome'].astype(str)
 
         return df
 

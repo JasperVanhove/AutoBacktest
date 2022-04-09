@@ -42,3 +42,7 @@ if __name__ == '__main__':
                         backtest.run()
                     except Exception as e:
                         print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!\n{}'.format(pair, tf, rr, atr, e))
+
+    # strategy = WavetrendEMA('BTCUSDT', '15mtest', rr=float(1.5), atr_multiplier=float(1.6))  # rr and atr_multiplier
+    # backtest = Backtest(strategy, 1000, 2, commission=0.06)
+    # backtest.run()
