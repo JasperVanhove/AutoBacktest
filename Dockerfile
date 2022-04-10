@@ -5,7 +5,7 @@ USER root
 WORKDIR /backtest-app
 
 COPY requirements.txt ./
-COPY backtest.py ./backtest.py
+COPY backtest_program.py ./backtest_program.py
 COPY program ./program
 COPY Data ./Data
 COPY Historical_Data ./Historical_Data
@@ -23,4 +23,4 @@ RUN wget http://nav.dl.sourceforge.net/project/ta-lib/ta-lib/0.4.0/ta-lib-0.4.0-
   make install \
   && pip3 install ta-lib
 
-ENTRYPOINT python3 backtest.py
+ENTRYPOINT python3 backtest_program.py
