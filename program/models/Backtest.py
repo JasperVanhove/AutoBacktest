@@ -105,31 +105,35 @@ class Backtest:
         self.balance -= trading_fee
 
         if latest_position['Side'] == 'Long':
+            return_perc = (close_price - latest_position['Price']) / latest_position['Price']
             if close_price > latest_position['Price']:
-                return_amount = risk_amount * self.strategy.risk_reward
+                return_amount = return_perc * latest_position['Size']
                 latest_position['Return'] = return_amount
-                latest_position['Return Perc'] = return_amount / self.balance
+                latest_position['Return Perc'] = return_perc
                 latest_position['Outcome'] = '+'
                 self.balance += return_amount
             elif close_price < latest_position['Price']:
-                latest_position['Return'] = -risk_amount
-                latest_position['Return Perc'] = -risk_amount / self.balance
+                return_amount = return_perc * latest_position['Size']
+                latest_position['Return'] = return_amount
+                latest_position['Return Perc'] = return_perc
                 latest_position['Outcome'] = '-'
-                self.balance -= risk_amount
+                self.balance += return_amount
             else:
                 latest_position['Outcome'] = '0'
                 latest_position['Return Perc'] = 0
                 latest_position['Return'] = 0
         elif latest_position['Side'] == 'Short':
+            return_perc = (latest_position['Price'] - close_price) / latest_position['Price']
             if close_price > latest_position['Price']:
-                latest_position['Return'] = -risk_amount
-                latest_position['Return Perc'] = -risk_amount / self.balance
-                latest_position['Outcome'] = '-'
-                self.balance -= risk_amount
-            elif close_price < latest_position['Price']:
-                return_amount = risk_amount * self.strategy.risk_reward
+                return_amount = return_perc * latest_position['Size']
                 latest_position['Return'] = return_amount
-                latest_position['Return Perc'] = return_amount / self.balance
+                latest_position['Return Perc'] = return_perc
+                latest_position['Outcome'] = '-'
+                self.balance += return_amount
+            elif close_price < latest_position['Price']:
+                return_amount = return_perc * latest_position['Size']
+                latest_position['Return'] = return_amount
+                latest_position['Return Perc'] = return_perc
                 latest_position['Outcome'] = '+'
                 self.balance += return_amount
             else:
