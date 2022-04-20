@@ -1,4 +1,5 @@
 import csv
+import logging
 import warnings
 from pathlib import Path
 
@@ -151,6 +152,11 @@ class Backtest:
         # Todo: Add extra result like avg trade duration
         # Todo: Put all the results in dictionary and use this to print/export
         if self.balance <= self.starting_balance:
+            print('\n')
+            print('\n')
+            print('No positive Balance!')
+            print('\n')
+            print('\n')
             return
 
         self.print_header_to_file()

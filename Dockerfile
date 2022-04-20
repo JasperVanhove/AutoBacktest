@@ -21,4 +21,4 @@ RUN wget http://nav.dl.sourceforge.net/project/ta-lib/ta-lib/0.4.0/ta-lib-0.4.0-
   make install \
   && pip3 install ta-lib
 
-ENTRYPOINT python3 backtest_program.py
+CMD ["python","-u","main.py"]
