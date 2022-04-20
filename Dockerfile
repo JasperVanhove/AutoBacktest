@@ -7,8 +7,6 @@ WORKDIR /backtest-app
 COPY requirements.txt ./
 COPY backtest_program.py ./backtest_program.py
 COPY program ./program
-COPY Data ./Data
-COPY Historical_Data ./Historical_Data
 
 RUN apt-get update && apt-get --no-install-recommends -y install python3-dev python3-pandas
 

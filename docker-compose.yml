@@ -2,4 +2,22 @@ version: '3'
 
 services:
   auto-backtester:
+    volumes:
+      - backtest-data:/backtest-app/Data
+      - historical-data:/backtest-app/Historical_Data
     build: .
+
+volumes:
+  backtest-data:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: addr=192.168.0.11,rw
+      device: ":/mnt/Main/Services/Backtest-Data"
+
+  historical-data:
+    driver: local
+    driver_opts:
+      type: nfs4
+      o: addr=192.168.0.11,rw
+      device: ":/mnt/Main/Services//Historical-Data"

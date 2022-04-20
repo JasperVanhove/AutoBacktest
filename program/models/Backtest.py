@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+from dateutil import relativedelta
 from program.models.Strategies import Strategy
 
 warnings.filterwarnings('ignore')
@@ -99,7 +99,6 @@ class Backtest:
         self.has_open_position = False
         latest_position = self.trades[-1]
         close_price = row['Exit Price'] or row['Close']
-        risk_amount = self.balance * (self.risk / 100)
         trading_fee = (latest_position['Size'] / latest_position['Price'] * self.commission) * 3  # 3X The fee amount: Entry, SL and TP order
         self.fees += trading_fee
         self.balance -= trading_fee
@@ -149,13 +148,21 @@ class Backtest:
         self.trades[-1] = latest_position
 
     def print_results(self):
-        # Todo: Add extra result like win/loss streak, fees, drawdown, avg trade duration
+        # Todo: Add extra result like avg trade duration
         # Todo: Put all the results in dictionary and use this to print/export
+        if self.balance <= self.starting_balance:
+            return
+
         self.print_header_to_file()
 
         abs_return = self.balance - self.starting_balance
         pc_return = 100 * abs_return / self.starting_balance
         amount_of_trades = len(self.trades)
+
+        date_diff = relativedelta.relativedelta(self.end_date, self.start_date)
+        months_diff = (date_diff.years * 12) + date_diff.months
+
+        avg_monthly_return = pc_return / months_diff
 
         if amount_of_trades > 0:
             winning_trades = [trade for trade in self.trades if trade['Outcome'] == '+']
@@ -212,6 +219,7 @@ class Backtest:
                 max_drawdown_perc = np.ptp(s) / s.max()
 
                 f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown_perc * 100, 2)))
+                f.write("Avg. Monthly Return Perc: {}%\n".format(round(avg_monthly_return, 2)))
                 f.write("Max win:                 ${}\n".format(round(max_win, 2)))
                 f.write("Average win:             ${}\n".format(round(avg_win, 2)))
                 f.write("Max loss:                -${}\n".format(round(abs(max_loss), 2)))
