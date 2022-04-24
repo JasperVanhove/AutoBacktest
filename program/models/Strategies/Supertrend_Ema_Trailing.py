@@ -25,6 +25,9 @@ class SupertrendEmaTrailing(Strategy):
         self.df['ATR'] = talib.ATR(self.df['High'], self.df['Low'], self.df['Close'], timeperiod=self.atr_period).astype(float).ffill() * self.atr_multiplier
         self.df = self.df.join(self._set_supertrend())
 
+        # remove first X NaN rows
+        self.df = self.df.loc[199:]
+
     def _get_side(self, row):
         return 1 if float(row['Close']) > float(row['EMA']) else -1 if float(row['EMA']) > float(row['Close']) else 0
 
