@@ -28,7 +28,7 @@ class Backtest:
         self.end_date = None
         self.trades = []
         self.fees = 0
-        self.commission = commission
+        self.commission = commission / 100
 
     def run(self):
         self.print_header()
@@ -83,7 +83,7 @@ class Backtest:
     def open_position(self, row):
         self.has_open_position = True
         quantity = self._get_trade_size(row)
-        trading_fee = (quantity * self.commission / 100) * 3  # 3X The fee amount: Entry, SL and TP order
+        trading_fee = quantity * self.commission * 3  # 3X The fee amount: Entry, SL and TP order
         self.fees += trading_fee
         self.balance -= trading_fee
 
@@ -100,9 +100,6 @@ class Backtest:
         self.has_open_position = False
         latest_position = self.trades[-1]
         close_price = row['Exit Price'] or row['Close']
-        trading_fee = (latest_position['Size'] / latest_position['Price'] * self.commission) * 3  # 3X The fee amount: Entry, SL and TP order
-        self.fees += trading_fee
-        self.balance -= trading_fee
 
         if latest_position['Side'] == 'Long':
             return_perc = (close_price - latest_position['Price']) / latest_position['Price']

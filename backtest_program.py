@@ -44,6 +44,6 @@ if __name__ == '__main__':
     #                 except Exception as e:
     #                     print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!\n{}'.format(pair, tf, rr, atr, e))
 
-    strategy = SupertrendEmaTrailing('BTCUSDT', '1h', rr=float(2.0), atr_multiplier=float(1.5))  # rr and atr_multiplier
+    strategy = SupertrendEmaTrailing('MATICUSDT', '1h', rr=float(2.0), atr_multiplier=float(1.5))  # rr and atr_multiplier
     backtest = Backtest(strategy, 1000, 2, commission=0.06)
     backtest.run()
