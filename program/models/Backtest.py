@@ -218,8 +218,9 @@ class Backtest:
 
                 f.write("")
 
-                s = (trades_df['Return Perc'] + 1).cumprod()
-                max_drawdown_perc = np.ptp(s) / s.max()
+                highwatermarks = trades_df['Return Perc'].cummax()
+                drawdowns = (1 + highwatermarks) / (1 + trades_df['Return Perc']) - 1
+                max_drawdown_perc = max(drawdowns)
 
                 f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown_perc * 100, 2)))
                 f.write("Avg. Monthly Return Perc: {}%\n".format(round(avg_monthly_return, 2)))
