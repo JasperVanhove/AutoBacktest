@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from empyrical import sharpe_ratio, aggregate_returns, annual_return, annual_volatility, max_drawdown
 import plotly.express as px
 from dateutil import relativedelta
 from program.models.Strategies import Strategy
@@ -195,6 +196,20 @@ class Backtest:
             grouper = (trades_df.Outcome != trades_df.Outcome.shift()).cumsum()
             longest_win_streak = trades_df.groupby(grouper).cumcount().max()    # Todo: Calculate this with a method
 
+            profit_factor = wins_df['Returns'].sum() / abs(loss_df['Returns'].sum())
+
+            peaks = trades_df['Equity'].cummax()
+            drawdowns = (trades_df['Equity'] - peaks) / peaks
+            max_drawdown_perc = min(drawdowns)
+            #
+            # data_df = pd.DataFrame.from_dict({'Date': trades_df['Time'].dt.normalize(), 'Daily Results Perc': trades_df['Return Perc'], 'Daily Results': trades_df['Returns']})
+            # data_df.groupby(['Date']).sum()
+            # all_dates = pd.DataFrame.from_dict({'Date': self.strategy.df['Open Time'].dt.normalize().drop_duplicates(), 'Daily Results Perc': 0, 'Daily Results': 0})
+            #
+            # df = pd.concat([data_df, all_dates])
+            # daily_results = df.groupby(['Date']).sum()
+            # daily_results['Date'] = daily_results.index
+
             with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
                 f.write("\n---------------------------------------------------\n")
@@ -218,11 +233,8 @@ class Backtest:
 
                 f.write("")
 
-                highwatermarks = trades_df['Return Perc'].cummax()
-                drawdowns = (1 + highwatermarks) / (1 + trades_df['Return Perc']) - 1
-                max_drawdown_perc = max(drawdowns)
-
                 f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown_perc * 100, 2)))
+                f.write("Profit Factor:            {}%\n".format(round(profit_factor, 2)))
                 f.write("Avg. Monthly Return Perc: {}%\n".format(round(avg_monthly_return, 2)))
                 f.write("Max win:                 ${}\n".format(round(max_win, 2)))
                 f.write("Average win:             ${}\n".format(round(avg_win, 2)))
@@ -312,7 +324,7 @@ class Backtest:
             print("I/O error")
 
     def _create_dataframe_from_list(self, trade_list):
-        time_array = [trade['Close Time'] for trade in trade_list]
+        time_array = [trade['Open Time'] for trade in trade_list]
         balance_array = [trade['Balance'] for trade in trade_list]
         returns_array = [trade['Return'] for trade in trade_list]
         returns_perc_array = [trade['Return Perc'] for trade in trade_list]

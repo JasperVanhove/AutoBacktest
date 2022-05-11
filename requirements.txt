@@ -3,4 +3,3 @@ numpy~=1.22.2
 python-dotenv~=0.19.2
 plotly~=5.6.0
 kaleido
-python-dotenv
