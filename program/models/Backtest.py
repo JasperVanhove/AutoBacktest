@@ -165,7 +165,7 @@ class Backtest:
 
         avg_monthly_return = pc_return / months_diff
 
-        if amount_of_trades > 0:
+        if amount_of_trades > 50 and avg_monthly_return >= 3.0:
             winning_trades = [trade for trade in self.trades if trade['Outcome'] == '+']
             losing_trades = [trade for trade in self.trades if trade['Outcome'] == '-']
             break_even_trades = [trade for trade in self.trades if trade['Outcome'] == '0']
@@ -231,7 +231,7 @@ class Backtest:
                 f.write("")
 
                 f.write("Maximum drawdown:        {}%\n".format(round(max_drawdown_perc * 100, 2)))
-                f.write("Profit Factor:            {}%\n".format(round(profit_factor, 2)))
+                f.write("Profit Factor:            {}\n".format(round(profit_factor, 2)))
                 f.write("Avg. Monthly Return Perc: {}%\n".format(round(avg_monthly_return, 2)))
                 f.write("Max win:                 ${}\n".format(round(max_win, 2)))
                 f.write("Average win:             ${}\n".format(round(avg_win, 2)))
