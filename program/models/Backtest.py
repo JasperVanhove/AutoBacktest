@@ -1,11 +1,8 @@
 import csv
-import logging
 import warnings
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-from empyrical import sharpe_ratio, aggregate_returns, annual_return, annual_volatility, max_drawdown
 import plotly.express as px
 from dateutil import relativedelta
 from program.models.Strategies import Strategy
@@ -194,7 +191,7 @@ class Backtest:
             avg_loss = loss_df['Returns'].min()
 
             grouper = (trades_df.Outcome != trades_df.Outcome.shift()).cumsum()
-            longest_win_streak = trades_df.groupby(grouper).cumcount().max()    # Todo: Calculate this with a method
+            longest_win_streak = trades_df.groupby(grouper).cumcount().max()  # Todo: Calculate this with a method
 
             profit_factor = wins_df['Returns'].sum() / abs(loss_df['Returns'].sum())
 
