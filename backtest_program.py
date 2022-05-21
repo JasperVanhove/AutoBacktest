@@ -5,6 +5,8 @@ import os
 import shutil
 
 from program.models.Backtest import Backtest
+from program.models.Strategies.Double_EMA_MACD_Cross import DoubleEmaMacdCross
+from program.models.Strategies.Double_EMA_MACD_Hist import DoubleEmaMacdHist
 from program.models.Strategies.Wavetrend_EMA import WavetrendEMA
 from program.models.Strategies.Supertrend_Ema_Trailing import SupertrendEmaTrailing
 
@@ -100,8 +102,8 @@ if __name__ == '__main__':
                     except Exception as e:
                         print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!\n{}'.format(pair, tf, rr, atr, e))
 
-    # strategy = SupertrendEmaTrailing('BTCUSDT', '1h', rr=float(3.0), atr_multiplier=float(2.9))  # rr and atr_multiplier
+    # strategy = DoubleEmaMacdHist('BTCUSDT', '1h', rr=float(1.5), atr_multiplier=float(1.5))  # rr and atr_multiplier
     # backtest = Backtest(strategy, 1000, 2, commission=0.06)
-    # backtest.run()
+    # backtest.run(test=True)
 
     sort_results_in_directories()

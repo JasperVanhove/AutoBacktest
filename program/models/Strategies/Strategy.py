@@ -63,7 +63,29 @@ class Strategy:
         self.df.iloc[index] = row
 
     def set_exit_signals(self, open_trade, index, row):
-        raise NotImplementedError()
+        if row['Has Open Position']:
+            if open_trade['Side'] == 'Long':
+                exit_value = 1 if row['High'] >= row['TP Price'] or row['Low'] <= row['SL Price'] else 0
+                if exit_value:
+                    row['Exit'] = exit_value
+                    row['Exit Price'] = row['TP Price'] if row['High'] >= row['TP Price'] else row['SL Price']
+                    row['Has Open Position'] = 0
+                    row['TP Price'] = 0
+                    row['SL Price'] = 0
+            elif open_trade['Side'] == 'Short':
+                exit_value = 1 if row['High'] >= row['SL Price'] or row['Low'] <= row['TP Price'] else 0
+                if exit_value:
+                    row['Exit'] = exit_value
+                    row['Exit Price'] = row['SL Price'] if row['High'] >= row['SL Price'] else row['TP Price']
+                    row['Has Open Position'] = 0
+                    row['TP Price'] = 0
+                    row['SL Price'] = 0
+            else:
+                row['Exit'] = 0
+        else:
+            row['Exit'] = 0
+
+        self.df.iloc[index] = row
 
     def _get_candle_data(self):
         path = Path(__file__).parent.parent.parent.parent / f'Historical_Data/{self.symbol}_{self.tf}.csv'

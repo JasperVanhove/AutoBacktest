@@ -77,6 +77,7 @@ class MtfEmaMacdDiv(Strategy):
     def _get_stoploss_price(self, row):
         prev_index = row.name - 1 if row.name > 0 else 0
 
+        # Todo: Look at the charts and use ATR OR Swing High/Low, not both
         max_values = self.df['High'].rolling(self.swing_lockback_period).max()
         min_values = self.df['Low'].rolling(self.swing_lockback_period).min()
 

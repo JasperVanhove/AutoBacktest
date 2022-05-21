@@ -37,31 +37,6 @@ class WavetrendEMA(Strategy):
     def _get_side(self, row):
         return 1 if float(row['Close']) > float(row['EMA']) else -1 if float(row['EMA']) > float(row['Close']) else 0
 
-    def set_exit_signals(self, open_trade, index, row):
-        if row['Has Open Position']:
-            if open_trade['Side'] == 'Long':
-                exit_value = 1 if row['High'] >= row['TP Price'] or row['Low'] <= row['SL Price'] else 0
-                if exit_value:
-                    row['Exit'] = exit_value
-                    row['Exit Price'] = row['TP Price'] if row['High'] >= row['TP Price'] else row['SL Price']
-                    row['Has Open Position'] = 0
-                    row['TP Price'] = 0
-                    row['SL Price'] = 0
-            elif open_trade['Side'] == 'Short':
-                exit_value = 1 if row['High'] >= row['SL Price'] or row['Low'] <= row['TP Price'] else 0
-                if exit_value:
-                    row['Exit'] = exit_value
-                    row['Exit Price'] = row['SL Price'] if row['High'] >= row['SL Price'] else row['TP Price']
-                    row['Has Open Position'] = 0
-                    row['TP Price'] = 0
-                    row['SL Price'] = 0
-            else:
-                row['Exit'] = 0
-        else:
-            row['Exit'] = 0
-
-        self.df.iloc[index] = row
-
     def _enter_trade(self, row):
         if row['Side'] == 1:
             return 1 if row['CrossUp'] == 1 and row['WT2'] <= self.wt_oversold else 0
@@ -71,6 +46,7 @@ class WavetrendEMA(Strategy):
     def _get_stoploss_price(self, row):
         prev_index = row.name - 1 if row.name > 0 else 0
 
+        # Todo: Look at the charts and use ATR OR Swing High/Low, not both
         max_values = self.df['High'].rolling(self.swing_lockback_period).max()
         min_values = self.df['Low'].rolling(self.swing_lockback_period).min()
 
