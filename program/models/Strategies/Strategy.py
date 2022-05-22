@@ -33,6 +33,11 @@ class Strategy:
 
         self.df.iloc[index] = row
 
+    def add_equity(self, index, row, equity):
+        row['Equity'] = equity
+
+        self.df.iloc[index] = row
+
     def set_columns(self):
         self.df = self.df.append({
             'Side': 0,
@@ -42,7 +47,8 @@ class Strategy:
             'SL Price': 0,
             'TP Price': 0,
             'Exit': 0,
-            'Exit Price': 0
+            'Exit Price': 0,
+            'Equity': 0
         }, ignore_index=True)
 
         self.df['Exit'] = self.df['Exit'].fillna(0).astype(int)
@@ -52,6 +58,7 @@ class Strategy:
         self.df['SL Price'] = self.df['SL Price'].fillna(0.0).astype(float)
         self.df['TP Price'] = self.df['TP Price'].fillna(0.0).astype(float)
         self.df['Exit Price'] = self.df['Exit Price'].fillna(0.0).astype(float)
+        self.df['Equity'] = self.df['Equity'].fillna(0.0).astype(float)
         self.df['Side'] = self.df.apply(lambda row: self._get_side(row), axis=1).fillna(0).astype(int)
 
     def set_entry_signals(self, index, row):

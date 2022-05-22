@@ -46,6 +46,7 @@ class Backtest:
 
         for index, row in self.strategy.df.iterrows():
             self.strategy.set_basic_columns(index, row)
+            self.strategy.add_equity(index, row, self.balance)
             if not self.has_open_position:
                 self.strategy.set_entry_signals(index, row)
                 if row['Enter'] == 1:
@@ -65,6 +66,15 @@ class Backtest:
             print('\n')
             return
 
+        if len(self.trades) < 50:
+            print('\n')
+            print('\n')
+            print('Need more than 50 trades!')
+            print('\n')
+            print('\n')
+            return
+
+        self._calculate_results()
         self.print_results() if test else self.print_results_to_file()
 
     def print_header(self):
@@ -154,9 +164,8 @@ class Backtest:
         self.trades[-1] = latest_position
 
     def print_results_to_file(self):
-        self._calculate_results()
         self.print_header_to_file()
-        if self.results['amount_of_trades'] > 50 and self.results['avg_monthly_return'] >= 3.0:
+        if self.results['gmean_monthly_return'] >= 3.0:
             with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
                 f.write("\n---------------------------------------------------\n")
@@ -166,6 +175,7 @@ class Backtest:
                 f.write("End date:                {}\n".format(self.end_date))
                 f.write("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
                 f.write("Ending balance:          ${}\n".format(round(self.balance, 2)))
+                f.write("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
                 f.write("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
                                                                       round(self.results['pc_return'], 1)))
 
@@ -173,51 +183,63 @@ class Backtest:
                 if self.commission:
                     f.write("Total fees:              ${}\n".format(round(self.fees, 3)))
                 f.write("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
-                f.write("Backtest win rate:       {}%\n".format(round(self.results['pc_win'], 1)))
-                f.write("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'], 1)))
+                f.write("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
+                f.write("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
                 if self.results['pc_breakeven']:
                     f.write("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
 
                 f.write("")
 
-                f.write("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'] * 100, 2)))
+                f.write("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
                 f.write("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
-                f.write("Avg. Monthly Return Perc: {}%\n".format(round(self.results['avg_monthly_return'], 2)))
-                f.write("Max win:                 ${}\n".format(round(self.results['max_win'], 2)))
-                f.write("Average win:             ${}\n".format(round(self.results['avg_win'], 2)))
-                f.write("Max loss:                -${}\n".format(round(abs(self.results['max_loss']), 2)))
-                f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_loss']), 2)))
+                f.write("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
+                f.write("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
+                f.write("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
+                f.write("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
+                f.write("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
+                f.write("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
+                f.write("")
+                f.write("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
+                f.write("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
+                f.write("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
+                f.write("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_loss']), 2)))
                 f.write("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
-                # f.write("Longest losing streak:   {} trades\n".format(longest_lose_streak))
-                # f.write("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
-                if self.results.get('long_trades', False):
-                    f.write("\n            Summary of long trades\n")
-                    f.write("----------------------------------------------\n")
-                    f.write("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
-                    f.write("Long win rate:           {}%\n".format(round(self.results['pc_win_long'], 1)))
-                    f.write("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'], 1)))
-                    f.write("Max win:                 ${}\n".format(round(self.results['max_long_win'], 2)))
-                    f.write("Average win:             ${}\n".format(round(self.results['avg_long_win'], 2)))
-                    f.write("Max loss:                -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
-                    f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
-                    f.write("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
-                else:
-                    f.write("There were no long trades.\n")
+                # print("Longest losing streak:   {} trades\n".format(longest_lose_streak))
+                # print("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
+                f.write("")
+                f.write("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
+                f.write("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
+                f.write("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
+                f.write("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
 
-                if self.results.get('short_trades', False):
+            if self.results.get('long_trades', False):
+                f.write("\n            Summary of long trades\n")
+                f.write("----------------------------------------------\n")
+                f.write("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
+                f.write("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
+                f.write("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
+                f.write("Max win:                 ${}\n".format(round(self.results['max_long_win'], 2)))
+                f.write("Average win:             ${}\n".format(round(self.results['avg_long_win'], 2)))
+                f.write("Max loss:                -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
+                f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
+                f.write("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
+            else:
+                f.write("There were no long trades.\n")
 
-                    f.write("\n            Summary of short trades\n")
-                    f.write("----------------------------------------------\n")
-                    f.write("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
-                    f.write("Short win rate:           {}%\n".format(round(self.results['pc_win_short'], 1)))
-                    f.write("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'], 1)))
-                    f.write("Max win:                 ${}\n".format(round(self.results['max_short_win'], 2)))
-                    f.write("Average win:             ${}\n".format(round(self.results['avg_short_win'], 2)))
-                    f.write("Max loss:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
-                    f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
-                    f.write("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
-                else:
-                    f.write("There were no short trades.\n")
+            if self.results.get('short_trades', False):
+
+                f.write("\n            Summary of short trades\n")
+                f.write("----------------------------------------------\n")
+                f.write("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
+                f.write("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
+                f.write("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
+                f.write("Max win:                 ${}\n".format(round(self.results['max_short_win'], 2)))
+                f.write("Average win:             ${}\n".format(round(self.results['avg_short_win'], 2)))
+                f.write("Max loss:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
+                f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
+                f.write("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
+            else:
+                f.write("There were no short trades.\n")
 
             self._export_trades_to_csv()
         else:
@@ -226,9 +248,7 @@ class Backtest:
                 f.write(f'\n')
 
     def print_results(self):
-        # Todo: Add extra result like avg trade duration
-        self._calculate_results()
-        if self.results['amount_of_trades'] > 50 and self.results['avg_monthly_return'] >= 3.0:
+        if self.results['gmean_monthly_return'] >= 3.0:
 
             print("\n---------------------------------------------------\n")
             print("                 Backtest Results\n")
@@ -237,6 +257,7 @@ class Backtest:
             print("End date:                {}\n".format(self.end_date))
             print("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
             print("Ending balance:          ${}\n".format(round(self.balance, 2)))
+            print("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
             print("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
                                                                 round(self.results['pc_return'], 1)))
 
@@ -244,16 +265,22 @@ class Backtest:
             if self.commission:
                 print("Total fees:              ${}\n".format(round(self.fees, 3)))
             print("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
-            print("Backtest win rate:       {}%\n".format(round(self.results['pc_win'], 1)))
-            print("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'], 1)))
+            print("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
+            print("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
             if self.results['pc_breakeven']:
                 print("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
 
             print("")
 
-            print("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'] * 100, 2)))
+            print("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
             print("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
-            print("Avg. Monthly Return Perc: {}%\n".format(round(self.results['avg_monthly_return'], 2)))
+            print("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
+            print("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
+            print("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
+            print("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
+            print("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
+            print("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
+            print("")
             print("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
             print("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
             print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
@@ -261,12 +288,18 @@ class Backtest:
             print("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
             # print("Longest losing streak:   {} trades\n".format(longest_lose_streak))
             # print("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
+            print("")
+            print("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
+            print("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
+            print("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
+            print("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
+
             if self.results.get('long_trades', False):
                 print("\n            Summary of long trades\n")
                 print("----------------------------------------------\n")
                 print("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
-                print("Long win rate:           {}%\n".format(round(self.results['pc_win_long'], 1)))
-                print("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'], 1)))
+                print("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
+                print("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
                 print("Max win Amount:            ${}\n".format(round(self.results['max_long_win'], 2)))
                 print("Average win Amount:        ${}\n".format(round(self.results['avg_long_win'], 2)))
                 print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
@@ -280,8 +313,8 @@ class Backtest:
                 print("\n            Summary of short trades\n")
                 print("----------------------------------------------\n")
                 print("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
-                print("Short win rate:           {}%\n".format(round(self.results['pc_win_short'], 1)))
-                print("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'], 1)))
+                print("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
+                print("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
                 print("Max win Amount:                 ${}\n".format(round(self.results['max_short_win'], 2)))
                 print("Average win Amount:             ${}\n".format(round(self.results['avg_short_win'], 2)))
                 print("Max loss Amount:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
@@ -315,9 +348,12 @@ class Backtest:
 
         df = pd.DataFrame.from_dict({'Time': time_array, 'Equity': balance_array, 'Returns': returns_array, 'Return Perc': returns_perc_array, 'Close Time': close_time_array, 'Outcome': outcome_array})
 
+        df['Duration'] = df['Close Time'] - df['Time']
+
         df['Time'] = pd.to_datetime(df['Time'], format='%Y-%m-%d')
         df['Equity'] = df['Equity'].astype(float)
         df['Returns'] = df['Returns'].astype(float)
+        df['Return Perc'] = df['Return Perc'].astype(float)
         df['Close Time'] = pd.to_datetime(df['Close Time'], format='%Y-%m-%d')
         df['Outcome'] = df['Outcome'].astype(str)
 
@@ -340,30 +376,42 @@ class Backtest:
         date_diff = relativedelta.relativedelta(self.end_date, self.start_date)
         months_diff = (date_diff.years * 12) + date_diff.months
 
-        # Todo: Use the Geometrical Mean instead
-        self.results['avg_monthly_return'] = self.results['pc_return'] / months_diff
+        indexed_df = self.strategy.df.set_index('Open Time')
+
+        self.results['equity_peak'] = indexed_df['Equity'].max()
+
+        dd, dd_duration, dd_peaks = self._get_dd_metrics(indexed_df['Equity'])
+        max_dd = -np.nan_to_num(dd.max())
+
+        day_returns = indexed_df['Equity'].resample('D').last().dropna().pct_change()
+        gmean_day_return = self.geometric_mean(day_returns)
+
+        annualized_return = (1 + gmean_day_return) ** 365 - 1
+        annual_volatility = self._get_annual_volatility(day_returns, gmean_day_return)
+
+        sharpe_ratio = self._get_sharpe_ratio(annualized_return, annual_volatility)
+        sortino_ratio = self._get_sortino_ratio(day_returns, annualized_return)
+        calmar_ratio = self._get_calmar_ratio(annualized_return, max_dd)
+
+        self.results['annualized_return'] = annualized_return
+        self.results['gmean_monthly_return'] = (annualized_return / 12) * 100
+        self.results['annual_volatility'] = annual_volatility
+
+        self.results['sharpe_ratio'] = sharpe_ratio
+        self.results['sortino_ratio'] = sortino_ratio
+        self.results['calmar_ratio'] = calmar_ratio
+
+        self.results['max_drawdown_perc'] = max_dd * 100
+        self.results['avg_drawdown_perc'] = -dd_peaks.mean() * 100
+        self.results['max_drawdown_duration'] = dd_duration.max()
+        self.results['avg_drawdown_duration'] = dd_duration.mean()
 
         ### Todo: Add extra metrics
-        # - Sharpe Ratio
-        # - Sortino Ratio
-        # - Volatility
-        # - Avg Expected Return Perc
-        # - DD Duration
-        # - Avg/Longest/Shortest Trade Duration
         # - Equity Peak
-        # - Return Annually Perc
         # - SQN??
         ###
 
-        # data_df = pd.DataFrame.from_dict({'Date': trades_df['Time'].dt.normalize(), 'Daily Results Perc': trades_df['Return Perc'], 'Daily Results': trades_df['Returns']})
-        # data_df.groupby(['Date']).sum()
-        # all_dates = pd.DataFrame.from_dict({'Date': self.strategy.df['Open Time'].dt.normalize().drop_duplicates(), 'Daily Results Perc': 0, 'Daily Results': 0})
-        #
-        # df = pd.concat([data_df, all_dates])
-        # daily_results = df.groupby(['Date']).sum()
-        # daily_results['Date'] = daily_results.index
-
-        if self.results['amount_of_trades'] > 50 and self.results['avg_monthly_return'] >= 3.0:
+        if self.results['gmean_monthly_return'] >= 3.0:
             self.results['winning_trades'] = [trade for trade in self.trades if trade['Outcome'] == '+']
             self.results['losing_trades'] = [trade for trade in self.trades if trade['Outcome'] == '-']
             self.results['break_even_trades'] = [trade for trade in self.trades if trade['Outcome'] == '0']
@@ -371,8 +419,8 @@ class Backtest:
             self.results['long_trades'] = [trade for trade in self.trades if trade['Side'] == 'Long']
             self.results['short_trades'] = [trade for trade in self.trades if trade['Side'] == 'Short']
 
-            self.results['pc_win'] = 100 * len(self.results['winning_trades']) / self.results['amount_of_trades']
-            self.results['pc_loss'] = 100 * len(self.results['losing_trades']) / self.results['amount_of_trades']
+            self.results['pc_win'] = len(self.results['winning_trades']) / self.results['amount_of_trades']
+            self.results['pc_loss'] = len(self.results['losing_trades']) / self.results['amount_of_trades']
             self.results['pc_breakeven'] = 100 * len(self.results['break_even_trades']) / self.results['amount_of_trades']
 
             trades_df = self._create_dataframe_from_list(self.trades)
@@ -386,16 +434,20 @@ class Backtest:
             self.results['max_win'] = wins_df['Returns'].max()
             self.results['avg_win'] = wins_df['Returns'].mean()
             self.results['max_loss'] = loss_df['Returns'].min()
-            self.results['avg_loss'] = loss_df['Returns'].min()
+            self.results['avg_loss'] = loss_df['Returns'].mean()
 
             grouper = (trades_df.Outcome != trades_df.Outcome.shift()).cumsum()
-            self.results['longest_win_streak'] = trades_df.groupby(grouper).cumcount().max()  # Todo: Calculate this with a method
+            self.results['longest_win_streak'] = trades_df.groupby(grouper).cumcount().max()
+
+            gmean_trade_return = self.geometric_mean(trades_df['Return Perc'])
+
+            self.results['avg_trade_perc'] = gmean_trade_return * 100
+            self.results['max_trade_duration'] = self._round_timedelta(trades_df['Duration'].max())
+            self.results['avg_trade_duration'] = self._round_timedelta(trades_df['Duration'].mean())
 
             self.results['profit_factor'] = wins_df['Returns'].sum() / abs(loss_df['Returns'].sum())
-
-            peaks = trades_df['Equity'].cummax()
-            drawdowns = (trades_df['Equity'] - peaks) / peaks
-            self.results['max_drawdown_perc'] = min(drawdowns)
+            self.results['expectancy_perc'] = self._get_expectancy_ratio()
+            # self.results['sqn'] = np.sqrt(self.results['amount_of_trades']) * pl.mean() / (pl.std() or np.nan)
 
             if len(self.results['long_trades']) > 0:
                 losing_long_trades = [trade for trade in self.results['long_trades'] if trade['Outcome'] == '-']
@@ -404,13 +456,13 @@ class Backtest:
                 long_win_df = self._create_dataframe_from_list(winning_long_trades)
                 long_loss_df = self._create_dataframe_from_list(losing_long_trades)
 
-                self.results['pc_loss_long'] = 100 * len(losing_long_trades) / len(self.results['long_trades'])
-                self.results['pc_win_long'] = 100 * len(winning_long_trades) / len(self.results['long_trades'])
+                self.results['pc_loss_long'] = len(losing_long_trades) / len(self.results['long_trades'])
+                self.results['pc_win_long'] = len(winning_long_trades) / len(self.results['long_trades'])
 
                 self.results['max_long_win'] = long_win_df['Returns'].max()
                 self.results['avg_long_win'] = long_win_df['Returns'].mean()
                 self.results['max_long_loss'] = long_loss_df['Returns'].min()
-                self.results['avg_long_loss'] = long_loss_df['Returns'].min()
+                self.results['avg_long_loss'] = long_loss_df['Returns'].mean()
 
                 grouper = (long_df.Outcome != long_df.Outcome.shift()).cumsum()
                 self.results['longest_long_win_streak'] = long_df.groupby(grouper).cumcount().max()  # Todo: Calculate this with a method
@@ -422,13 +474,64 @@ class Backtest:
                 short_win_df = self._create_dataframe_from_list(winning_short_trades)
                 short_loss_df = self._create_dataframe_from_list(losing_short_trades)
 
-                self.results['pc_win_short'] = 100 * len(winning_short_trades) / len(self.results['short_trades'])
-                self.results['pc_loss_short'] = 100 * len(losing_short_trades) / len(self.results['short_trades'])
+                self.results['pc_win_short'] = len(winning_short_trades) / len(self.results['short_trades'])
+                self.results['pc_loss_short'] = len(losing_short_trades) / len(self.results['short_trades'])
 
                 self.results['max_short_win'] = short_win_df['Returns'].max()
                 self.results['avg_short_win'] = short_win_df['Returns'].mean()
                 self.results['max_short_loss'] = short_loss_df['Returns'].min()
-                self.results['avg_short_loss'] = short_loss_df['Returns'].min()
+                self.results['avg_short_loss'] = short_loss_df['Returns'].mean()
 
                 grouper = (short_df.Outcome != short_df.Outcome.shift()).cumsum()
                 self.results['longest_short_win_streak'] = short_df.groupby(grouper).cumcount().max()
+
+    def geometric_mean(self, returns: pd.Series) -> float:
+        returns = returns.fillna(0) + 1
+        if np.any(returns <= 0):
+            return 0
+        return np.exp(np.log(returns).sum() / (len(returns) or np.nan)) - 1
+
+    def _get_annual_volatility(self, daily_returns, gmean_day_return):
+        return np.sqrt((daily_returns.var(ddof=int(bool(daily_returns.shape))) + (1 + gmean_day_return) ** 2) ** 365 - (1 + gmean_day_return) ** (2 * 365)) * 100
+
+    def _get_sharpe_ratio(self, annualized_return, annual_volatility):
+        return np.clip((annualized_return * 100 - 0) / (annual_volatility or np.nan), 0, np.inf)
+
+    def _get_sortino_ratio(self, daily_returns, annualized_return):
+        return np.clip((annualized_return - 0) / (np.sqrt(np.mean(daily_returns.clip(-np.inf, 0) ** 2)) * np.sqrt(365)), 0, np.inf)
+
+    def _get_calmar_ratio(self, annualized_return, max_dd):
+        return np.clip(annualized_return / (-max_dd or np.nan), 0, np.inf)
+
+    def _get_dd_metrics(self, equity):
+        dd = 1 - equity / np.maximum.accumulate(equity)
+
+        iloc = np.unique(np.r_[(dd == 0).values.nonzero()[0], len(dd) - 1])
+        iloc = pd.Series(iloc, index=dd.index[iloc])
+        df = iloc.to_frame('iloc').assign(prev=iloc.shift())
+        df = df[df['iloc'] > df['prev'] + 1].astype(int)
+
+        # If no drawdown since no trade, avoid below for pandas sake and return nan series
+        if not len(df):
+            return (dd.replace(0, np.nan),) * 3
+
+        df['duration'] = df['iloc'].map(dd.index.__getitem__) - df['prev'].map(dd.index.__getitem__)
+        df['peak_dd'] = df.apply(lambda row: dd.iloc[row['prev']:row['iloc'] + 1].max(), axis=1)
+        df = df.reindex(dd.index)
+
+        return dd, df['duration'], df['peak_dd']
+
+    def _round_timedelta(self, timedelta):
+        days = timedelta.days
+        seconds = timedelta.seconds
+        hours = seconds // 3600
+        minutes = (seconds // 60) % 60
+
+        return f'{days} days, {hours} hours and {minutes} minutes'
+
+    def _get_expectancy_ratio(self):
+        win_ratio = self.results['pc_win']
+        loss_ratio = self.results['pc_loss']
+        reward_to_risk_ratio = self.results['avg_win'] / abs(self.results['avg_loss'])
+
+        return (reward_to_risk_ratio * win_ratio) - loss_ratio

@@ -102,8 +102,8 @@ if __name__ == '__main__':
                     except Exception as e:
                         print('Error Backtesting {} on Timeframe {} with Risk/Reward {} and Atr Multiplier of {}!\n{}'.format(pair, tf, rr, atr, e))
 
-    # strategy = DoubleEmaMacdHist('BTCUSDT', '1h', rr=float(1.5), atr_multiplier=float(1.5))  # rr and atr_multiplier
+    # strategy = SupertrendEmaTrailing('BTCUSDT', '1h', rr=float(3.5), atr_multiplier=float(2.9))  # rr and atr_multiplier
     # backtest = Backtest(strategy, 1000, 2, commission=0.06)
     # backtest.run(test=True)
 
-    sort_results_in_directories()
+    # sort_results_in_directories()
