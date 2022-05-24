@@ -96,7 +96,7 @@ if __name__ == '__main__':
             for rr in rrs:
                 for atr in atrs:
                     try:
-                        strategy = WavetrendEMA(pair, tf, rr=float(rr), atr_multiplier=float(atr))  # rr and atr_multiplier
+                        strategy = SupertrendEmaTrailing(pair, tf, rr=float(rr), atr_multiplier=float(atr))  # rr and atr_multiplier
                         backtest = Backtest(strategy, 1000, 2, commission=0.06)
                         backtest.run()
                     except Exception as e:
