@@ -75,7 +75,12 @@ class Backtest:
             return
 
         self._calculate_results()
-        self.print_results() if test else self.print_results_to_file()
+        if self.results['gmean_monthly_return'] >= 3.0:
+            self.print_results() if test else self.print_results_to_file()
+        else:
+            print('\n')
+            print('Monthly percentage of 3% not reached!')
+            print('\n')
 
     def print_header(self):
         print('\n')
@@ -165,166 +170,156 @@ class Backtest:
 
     def print_results_to_file(self):
         self.print_header_to_file()
-        if self.results['gmean_monthly_return'] >= 3.0:
-            with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
+        with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
 
-                f.write("\n---------------------------------------------------\n")
-                f.write("                 Backtest Results\n")
-                f.write("---------------------------------------------------\n")
-                f.write("Start date:              {}\n".format(self.start_date))
-                f.write("End date:                {}\n".format(self.end_date))
-                f.write("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
-                f.write("Ending balance:          ${}\n".format(round(self.balance, 2)))
-                f.write("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
-                f.write("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
-                                                                      round(self.results['pc_return'], 1)))
+            f.write("\n---------------------------------------------------\n")
+            f.write("                 Backtest Results\n")
+            f.write("---------------------------------------------------\n")
+            f.write("Start date:              {}\n".format(self.start_date))
+            f.write("End date:                {}\n".format(self.end_date))
+            f.write("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
+            f.write("Ending balance:          ${}\n".format(round(self.balance, 2)))
+            f.write("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
+            f.write("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
+                                                                  round(self.results['pc_return'], 1)))
 
-                f.write("Instrument traded: {}\n".format(self.strategy.symbol))
-                if self.commission:
-                    f.write("Total fees:              ${}\n".format(round(self.fees, 3)))
-                f.write("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
-                f.write("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
-                f.write("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
-                if self.results['pc_breakeven']:
-                    f.write("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
-
-                f.write("")
-
-                f.write("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
-                f.write("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
-                f.write("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
-                f.write("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
-                f.write("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
-                f.write("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
-                f.write("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
-                f.write("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
-                f.write("")
-                f.write("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
-                f.write("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
-                f.write("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
-                f.write("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_loss']), 2)))
-                f.write("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
-                # print("Longest losing streak:   {} trades\n".format(longest_lose_streak))
-                # print("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
-                f.write("")
-                f.write("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
-                f.write("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
-                f.write("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
-                f.write("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
-
-            if self.results.get('long_trades', False):
-                f.write("\n            Summary of long trades\n")
-                f.write("----------------------------------------------\n")
-                f.write("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
-                f.write("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
-                f.write("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
-                f.write("Max win:                 ${}\n".format(round(self.results['max_long_win'], 2)))
-                f.write("Average win:             ${}\n".format(round(self.results['avg_long_win'], 2)))
-                f.write("Max loss:                -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
-                f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
-                f.write("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
-            else:
-                f.write("There were no long trades.\n")
-
-            if self.results.get('short_trades', False):
-
-                f.write("\n            Summary of short trades\n")
-                f.write("----------------------------------------------\n")
-                f.write("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
-                f.write("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
-                f.write("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
-                f.write("Max win:                 ${}\n".format(round(self.results['max_short_win'], 2)))
-                f.write("Average win:             ${}\n".format(round(self.results['avg_short_win'], 2)))
-                f.write("Max loss:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
-                f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
-                f.write("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
-            else:
-                f.write("There were no short trades.\n")
-
-            self._export_trades_to_csv()
-        else:
-            with open(data_path / f'Strategy_Results/{self.strategy.symbol}_{self.strategy.tf}_{self.strategy.short_name}_{self.strategy.risk_reward}RR_{self.strategy.atr_multiplier}ATR.txt', 'a') as f:
-                f.write('No trades taken.\n')
-                f.write(f'\n')
-
-    def print_results(self):
-        if self.results['gmean_monthly_return'] >= 3.0:
-
-            print("\n---------------------------------------------------\n")
-            print("                 Backtest Results\n")
-            print("---------------------------------------------------\n")
-            print("Start date:              {}\n".format(self.start_date))
-            print("End date:                {}\n".format(self.end_date))
-            print("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
-            print("Ending balance:          ${}\n".format(round(self.balance, 2)))
-            print("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
-            print("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
-                                                                round(self.results['pc_return'], 1)))
-
-            print("Instrument traded: {}\n".format(self.strategy.symbol))
+            f.write("Instrument traded: {}\n".format(self.strategy.symbol))
             if self.commission:
-                print("Total fees:              ${}\n".format(round(self.fees, 3)))
-            print("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
-            print("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
-            print("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
+                f.write("Total fees:              ${}\n".format(round(self.fees, 3)))
+            f.write("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
+            f.write("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
+            f.write("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
             if self.results['pc_breakeven']:
-                print("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
+                f.write("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
 
-            print("")
+            f.write("")
 
-            print("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
-            print("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
-            print("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
-            print("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
-            print("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
-            print("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
-            print("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
-            print("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
-            print("")
-            print("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
-            print("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
-            print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
-            print("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_loss']), 2)))
-            print("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
+            f.write("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
+            f.write("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
+            f.write("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
+            f.write("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
+            f.write("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
+            f.write("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
+            f.write("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
+            f.write("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
+            f.write("")
+            f.write("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
+            f.write("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
+            f.write("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
+            f.write("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_loss']), 2)))
+            f.write("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
             # print("Longest losing streak:   {} trades\n".format(longest_lose_streak))
             # print("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
-            print("")
-            print("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
-            print("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
-            print("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
-            print("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
+            f.write("")
+            f.write("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
+            f.write("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
+            f.write("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
+            f.write("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
 
-            if self.results.get('long_trades', False):
-                print("\n            Summary of long trades\n")
-                print("----------------------------------------------\n")
-                print("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
-                print("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
-                print("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
-                print("Max win Amount:            ${}\n".format(round(self.results['max_long_win'], 2)))
-                print("Average win Amount:        ${}\n".format(round(self.results['avg_long_win'], 2)))
-                print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
-                print("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
-                print("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
-            else:
-                print("There were no long trades.\n")
-
-            if self.results.get('short_trades', False):
-
-                print("\n            Summary of short trades\n")
-                print("----------------------------------------------\n")
-                print("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
-                print("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
-                print("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
-                print("Max win Amount:                 ${}\n".format(round(self.results['max_short_win'], 2)))
-                print("Average win Amount:             ${}\n".format(round(self.results['avg_short_win'], 2)))
-                print("Max loss Amount:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
-                print("Average loss Amount:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
-                print("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
-            else:
-                print("There were no short trades.\n")
+        if self.results.get('long_trades', False):
+            f.write("\n            Summary of long trades\n")
+            f.write("----------------------------------------------\n")
+            f.write("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
+            f.write("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
+            f.write("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
+            f.write("Max win:                 ${}\n".format(round(self.results['max_long_win'], 2)))
+            f.write("Average win:             ${}\n".format(round(self.results['avg_long_win'], 2)))
+            f.write("Max loss:                -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
+            f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
+            f.write("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
         else:
-            print('No trades taken.\n')
-            print(f'\n')
+            f.write("There were no long trades.\n")
+
+        if self.results.get('short_trades', False):
+
+            f.write("\n            Summary of short trades\n")
+            f.write("----------------------------------------------\n")
+            f.write("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
+            f.write("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
+            f.write("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
+            f.write("Max win:                 ${}\n".format(round(self.results['max_short_win'], 2)))
+            f.write("Average win:             ${}\n".format(round(self.results['avg_short_win'], 2)))
+            f.write("Max loss:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
+            f.write("Average loss:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
+            f.write("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
+        else:
+            f.write("There were no short trades.\n")
+
+        self._export_trades_to_csv()
+
+    def print_results(self):
+        print("\n---------------------------------------------------\n")
+        print("                 Backtest Results\n")
+        print("---------------------------------------------------\n")
+        print("Start date:              {}\n".format(self.start_date))
+        print("End date:                {}\n".format(self.end_date))
+        print("Starting balance:        ${}\n".format(round(self.starting_balance, 2)))
+        print("Ending balance:          ${}\n".format(round(self.balance, 2)))
+        print("Equity Peak:             ${}\n".format(round(self.results['equity_peak'], 2)))
+        print("Total return:            ${} ({}%)\n".format(round(self.results['abs_return'], 2),
+                                                            round(self.results['pc_return'], 1)))
+
+        print("Instrument traded: {}\n".format(self.strategy.symbol))
+        if self.commission:
+            print("Total fees:              ${}\n".format(round(self.fees, 3)))
+        print("Total no. trades:        {}\n".format(self.results['amount_of_trades']))
+        print("Backtest win rate:       {}%\n".format(round(self.results['pc_win'] * 100, 1)))
+        print("Backtest loss rate:       {}%\n".format(round(self.results['pc_loss'] * 100, 1)))
+        if self.results['pc_breakeven']:
+            print("\nInstrument breakeven rate (%):      {}\n".format(round(self.results['pc_breakeven'], 1)))
+
+        print("")
+
+        print("Maximum drawdown:        {}%\n".format(round(self.results['max_drawdown_perc'], 2)))
+        print("Profit Factor:            {}\n".format(round(self.results['profit_factor'], 2)))
+        print("Return (Ann.) [%]:        {}\n".format(round(self.results['annualized_return'] * 100, 2)))
+        print("Volatility (Ann.) [%]:    {}\n".format(round(self.results['annual_volatility'], 2)))
+        print("Avg. Monthly Return [%]:  {}%\n".format(round(self.results['gmean_monthly_return'], 2)))
+        print("Avg. Trade Return [%]:  {}%\n".format(round(self.results['avg_trade_perc'], 2)))
+        print("Avg. Trade Duration:  {}\n".format(self.results['avg_trade_duration']))
+        print("Max. Trade Duration:  {}\n".format(self.results['max_trade_duration']))
+        print("")
+        print("Max win Amount:            ${}\n".format(round(self.results['max_win'], 2)))
+        print("Average win Amount:        ${}\n".format(round(self.results['avg_win'], 2)))
+        print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_loss']), 2)))
+        print("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_loss']), 2)))
+        print("Longest win streak:      {} trades\n".format(self.results['longest_win_streak']))
+        # print("Longest losing streak:   {} trades\n".format(longest_lose_streak))
+        # print("Average trade duration:  {}\n".format(backtest_results['all_trades']['avg_trade_duration']))
+        print("")
+        print("Sharpe Ratio:            {}\n".format(round(self.results['sharpe_ratio'], 2)))
+        print("Sortino Ratio:            {}\n".format(round(self.results['sortino_ratio'], 2)))
+        print("Calmar Ratio:            {}\n".format(round(self.results['calmar_ratio'], 2)))
+        print("Expectancy [%]:            {}%\n".format(round(self.results['expectancy_perc'], 2)))
+
+        if self.results.get('long_trades', False):
+            print("\n            Summary of long trades\n")
+            print("----------------------------------------------\n")
+            print("Number of long trades:   {}\n".format(len(self.results['long_trades'])))
+            print("Long win rate:           {}%\n".format(round(self.results['pc_win_long'] * 100, 1)))
+            print("Long loss rate:           {}%\n".format(round(self.results['pc_loss_long'] * 100, 1)))
+            print("Max win Amount:            ${}\n".format(round(self.results['max_long_win'], 2)))
+            print("Average win Amount:        ${}\n".format(round(self.results['avg_long_win'], 2)))
+            print("Max loss Amount:          -${}\n".format(round(abs(self.results['max_long_loss']), 2)))
+            print("Average loss Amount:      -${}\n".format(round(abs(self.results['avg_long_loss']), 2)))
+            print("Longest win streak:      {} trades\n".format(self.results['longest_long_win_streak']))
+        else:
+            print("There were no long trades.\n")
+
+        if self.results.get('short_trades', False):
+
+            print("\n            Summary of short trades\n")
+            print("----------------------------------------------\n")
+            print("Number of short trades:   {}\n".format(len(self.results['short_trades'])))
+            print("Short win rate:           {}%\n".format(round(self.results['pc_win_short'] * 100, 1)))
+            print("Short loss rate:           {}%\n".format(round(self.results['pc_loss_short'] * 100, 1)))
+            print("Max win Amount:                 ${}\n".format(round(self.results['max_short_win'], 2)))
+            print("Average win Amount:             ${}\n".format(round(self.results['avg_short_win'], 2)))
+            print("Max loss Amount:                -${}\n".format(round(abs(self.results['max_short_loss']), 2)))
+            print("Average loss Amount:            -${}\n".format(round(abs(self.results['avg_short_loss']), 2)))
+            print("Longest win streak:      {} trades\n".format(self.results['longest_short_win_streak']))
+        else:
+            print("There were no short trades.\n")
 
     def _export_trades_to_csv(self):
         csv_columns = self.trades[0].keys()
